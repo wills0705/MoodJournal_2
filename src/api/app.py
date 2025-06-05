@@ -11,7 +11,7 @@ IMAGE_DIR = './generated_images'
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Allow CORS
-CORS(app, resources={r"/*": {"origins": "http://localhost:5174"}})
+CORS(app, resources={r"/*": {"origins": "https://moodjournal-2.onrender.com"}})
 
 # Stable Diffusion API configuration
 API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
