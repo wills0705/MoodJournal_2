@@ -15,7 +15,7 @@ CORS(app, resources={r"/*": {"origins": "http://localhost:5174"}})
 
 # Stable Diffusion API configuration
 API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
-API_KEY = "sk-AVPjbBLDSRtGSbdYpsreO42BjzCJejwOuYxLgnN6B3P1hHgF"  # Replace with your Stable Diffusion API key
+API_KEY = "sk-AVPjbBLDSRtGSbdYpsreO42BjzCJejwOuYxLgnN6B3P1hHgF" 
 
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image():
@@ -25,7 +25,7 @@ def generate_image():
 
         # Safely print out the JSON body instead of string concatenation
         data = request.json
-        print("#DEBUG - request JSON data:", data)  # CHANGED: Avoid TypeError if data is None/dict
+        print("#DEBUG - request JSON data:", data) 
 
         prompt = data.get("prompt") if data else None
         if not prompt:
@@ -94,6 +94,5 @@ def serve_image(filename):
     return send_from_directory(IMAGE_DIR, filename)
 
 if __name__ == "__main__":
-    # DEBUG: Starting Flask app
-    print("#DEBUG - Starting Flask server on http://127.0.0.1:5001")
-    app.run(host='127.0.0.1', port=5001, debug=True)
+    port = int(os.environ.get("PORT", 5000)) 
+    app.run(host="0.0.0.0", port=port) 
