@@ -85,11 +85,12 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { dayMap, monthMap } from '../lib/util';
-import moodSad from '@/assets/image/mood-sad.png'
-import moodFrown from '@/assets/image/mood-frown.png'
-import moodNormal from '@/assets/image/mood-normal.png'
-import moodSmile from '@/assets/image/mood-smile.png'
-import moodLaugh from '@/assets/image/mood-laugh.png'
+import moodSad from '../assets/image/mood-sad.png'
+import moodFrown from '../assets/image/mood-frown.png'
+import moodNormal from '../assets/image/mood-normal.png'
+import moodSmile from '../assets/image/mood-smile.png'
+import moodLaugh from '../assets/image/mood-laugh.png'
+
 
 export default {
   name: 'journal',
