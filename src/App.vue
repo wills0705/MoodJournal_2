@@ -125,7 +125,7 @@ export default {
         obj.sdImage = "";
         console.log("hello before response")
         // Call the Flask API to generate an image
-        const response = await fetch('https://moodjournal-2.onrender.com', {
+        const response = await fetch('https://moodjournal-2.onrender.com/api/generate-image', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
