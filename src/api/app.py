@@ -41,7 +41,7 @@ def generate_image():
             API_URL,
             headers={
                 "authorization": f"Bearer {API_KEY}",
-                "accept": "image/jpeg"
+                "accept": "image/*"
             },
             files={"none": ''},
             data={
