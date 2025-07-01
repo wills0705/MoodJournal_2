@@ -117,13 +117,14 @@ export default {
 
     async handleUpdate(obj) {
       try {
+        console.log("[1] handleUpdate triggered with content:", obj.content);
         // Add user and timestamp metadata
         const userId = auth.currentUser.uid;
         obj.userId = userId;
         obj.timestamp = Date.now();
         obj.mood = 2; 
         obj.sdImage = "";
-        console.log("hello before response")
+        console.log("[2] Sending prompt to Flask API:", obj.content);
         // Call the Flask API to generate an image
         const response = await fetch('https://moodjournal-2.onrender.com/api/generate-image', {
           method: 'POST',
@@ -132,25 +133,34 @@ export default {
           },
           body: JSON.stringify({ prompt: obj.content }), // Use the journal content as the prompt
         });
-
-        console.log("response from front end is : " + response)
+        console.log("[3] Response from Flask API:", response);
 
         if (!response.ok) {
           throw new Error('Failed to generate image');
         }
 
         const data = await response.json();
+        console.log("[4] Received image_url from Flask:", data.image_url);
+        
+        const imageUrlOnBackend = `https://moodjournal-2.onrender.com${data.image_url}`;
+        console.log("[4.1] Full backend image URL:", imageUrlOnBackend);
 
         // 新增：上传到Firebase Storage
         const storage = getStorage();
         const storageRef = ref(storage, `generated_images/${Date.now()}.jpg`);
-        
+        console.log("[5] Fetching image blob from:", imageUrlOnBackend);
+
         // 将base64转换为Blob
         const base64Response = await fetch(data.image_url);
         const blob = await base64Response.blob();
+        console.log("[5.1] Blob content type:", blob.type);
+
         // 上传文件
+        console.log("[6] Uploading blob to Firebase Storage...");
         const snapshot = await uploadBytes(storageRef, blob);
         const downloadURL = await getDownloadURL(snapshot.ref);
+        console.log("[7] Uploaded image URL from Firebase:", downloadURL);
+
 
 
         const imageUrl = downloadURL; // Extract the image URL from the response
@@ -159,12 +169,13 @@ export default {
         obj.sdImage = imageUrl;
 
         // Save the updated journal entry (with image) to Firestore
+        console.log("[8] Saving final journal to Firestore...");
         const docRef = await addDoc(collection(db, 'journalList'), obj);
         obj.id = docRef.id;
 
         // Add the new journal entry to the local journalList
         this.journalList.unshift(obj);
-
+        console.log("[9] Journal successfully saved:", obj);
         // Provide feedback to the user
         this.$message.success('Journal entry saved successfully');
       } catch (error) {
