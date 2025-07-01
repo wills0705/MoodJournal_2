@@ -15,7 +15,7 @@ CORS(app, resources={r"/*": {"origins": "https://moodjournal-2-jma7.onrender.com
 
 # Stable Diffusion API configuration
 API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
-API_KEY = "sk-HIEZJFa0CsiGdJ5YFj3HypdNlegSSNv3X1I1RGsY8YV1YOQj" 
+API_KEY = "sk-AVPjbBLDSRtGSbdYpsreO42BjzCJejwOuYxLgnN6B3P1hHgF" 
 
 @app.route('/api/generate-image', methods=['POST'])
 def generate_image():
