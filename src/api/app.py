@@ -53,6 +53,12 @@ def generate_image():
         print("#DEBUG - Received response with status code:", response.status_code)
 
         if response.status_code == 200:
+            content_type = response.headers.get("Content-Type", "")
+            if not content_type.startswith("image/"):
+                print("#DEBUG - Unexpected content type:", content_type)
+                print("#DEBUG - Raw response text:", response.text[:200])
+                return jsonify({"error": "API did not return an image."}), 500
+
             filename = f"{uuid4()}.jpeg"
             filepath = os.path.join(IMAGE_DIR, filename)
             print("#DEBUG - Saving image to:", filepath)
@@ -64,6 +70,7 @@ def generate_image():
                 "message": "Image generated successfully",
                 "image_url": f"/generated_images/{filename}"
             }), 200
+
         else:
             try:
                 error_content = response.json()
