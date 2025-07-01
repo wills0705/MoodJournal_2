@@ -151,7 +151,7 @@ export default {
         console.log("[5] Fetching image blob from:", imageUrlOnBackend);
 
         // 将base64转换为Blob
-        const base64Response = await fetch(data.image_url);
+        const base64Response = await fetch(imageUrlOnBackend);
         const blob = await base64Response.blob();
         console.log("[5.1] Blob content type:", blob.type);
 
