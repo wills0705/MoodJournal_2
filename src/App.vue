@@ -124,16 +124,23 @@ export default {
         obj.timestamp = Date.now();
         obj.mood = 2; 
         obj.sdImage = "";
-        console.log("[2] Sending prompt to Flask API:", obj.content);
-        // Call the Flask API to generate an image
+
+        const styleMap = {
+          1: "in pencil sketch style",
+          2: "in watercolor painting style",
+          3: "in pixel art style",
+          4: "in oil painting style",
+          5: "in cyberpunk neon style"
+        };
+
+        const styleText = styleMap[obj.buttonNumber] || "in default illustration style";
+        const prompt = `${obj.content}. Please generate this ${styleText}.`;
+
         const response = await fetch('https://moodjournal-2.onrender.com/api/generate-image', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ prompt: obj.content }), // Use the journal content as the prompt
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
         });
-        console.log("[3] Response from Flask API:", response);
 
         if (!response.ok) {
           throw new Error('Failed to generate image');

@@ -1,75 +1,122 @@
 <template>
   <div class="journal-write">
     <div class="journal-write-header">
-      <div class="header-date">
-        {{ currentDate }}
-      </div>
+      <div class="header-date">{{ currentDate }}</div>
     </div>
     <div class="journal-write-content">
       <a-textarea v-model:value="journalContent" placeholder="Click here to start write your new journal" />
     </div>
-    <div class="journal-write-save">
-      <a-button type="primary" size="large" :loading="isLoading" @click="saveText">Save</a-button>
-
+    <div class="journal-write-footer">
+      <div class="footer-left">
+        <a-button @click="showModal(1)" :type="activeButton === 1 ? 'primary' : 'default'">Pencil sketch</a-button>
+        <a-button @click="showModal(2)" :type="activeButton === 2 ? 'primary' : 'default'">Watercolor painting</a-button>
+        <a-button @click="showModal(3)" :type="activeButton === 3 ? 'primary' : 'default'">Pixel art</a-button>
+        <a-button @click="showModal(4)" :type="activeButton === 4 ? 'primary' : 'default'">Oil painting</a-button>
+        <a-button @click="showModal(5)" :type="activeButton === 5 ? 'primary' : 'default'">Cyberpunk neon</a-button>
+      </div>
+      <div class="footer-right">
+        <a-button type="primary" size="large" :loading="isLoading" @click="saveText">Save</a-button>
+      </div>
     </div>
+    <a-modal
+      v-for="i in 5"
+      :key="i"
+      :open="modalVisible[i]"
+      :title="`Style ${i}`"
+      :closable="false"
+      @ok="handleModalOk(i)"
+    >
+      <template v-if="i === 1">
+        <p>Pencil Sketch Preview</p>
+        <img src="/avatar-1.png" alt="Pencil Sketch" />
+      </template>
+      <template v-else-if="i === 2">
+        <p>Watercolor Painting Preview</p>
+        <img src="/avatar-1.png" alt="Watercolor Painting" />
+      </template>
+      <template v-else-if="i === 3">
+        <p>Pixel Art Preview</p>
+        <img src="/avatar-1.png" alt="Pixel Art" />
+      </template>
+      <template v-else-if="i === 4">
+        <p>Oil Painting Preview</p>
+        <img src="/avatar-1.png" alt="Oil Painting" />
+      </template>
+      <template v-else-if="i === 5">
+        <p>Cyberpunk Neon Preview</p>
+        <img src="/avatar-1.png" alt="Cyberpunk Neon" />
+      </template>
+    </a-modal>
   </div>
 </template>
+
 <script>
 import { formatDate } from '../lib/util';
-const SAVE_DEALY = 1000;
+import { getDatabase, ref, set } from 'firebase/database';
+
+const SAVE_DELAY = 1000;
+
 export default {
   name: 'write',
-  props: {
-    journalList: {
-      type: Array,
-      default: []
-    }
-  },
+  props: { journalList: { type: Array, default: [] } },
   data() {
     return {
-      // journal content
       journalContent: '',
-      // date
       currentDate: formatDate(new Date()),
-      // saving or not
       isLoading: false,
+      modalVisible: { 1: false, 2: false, 3: false, 4: false, 5: false },
+      activeButton: null
     }
   },
   methods: {
-    // clear
-    clearText() {
-      this.journalContent = ''
+    clearText() { this.journalContent = '' },
+    stopLoading() {
+    this.isLoading = false;
     },
-    // save journal
     saveText() {
-      if (!this.journalContent) {
-        return;
-      }
+      if (!this.journalContent) return;
       this.isLoading = true;
       setTimeout(() => {
-        this.isLoading = false;
         const d = new Date();
         const textObj = {
           currentDate: formatDate(d),
           currentTime: d,
           content: this.journalContent,
-          isApproved: false // 新增审批状态字段
-        }
-        this.$emit('updateJournal', textObj)
-        this.showTopic(this.journalContent)
+          isApproved: false,
+          buttonNumber: this.activeButton
+        };
+        this.$emit('updateJournal', textObj);
         this.clearText();
-      }, SAVE_DEALY)
+      }, SAVE_DELAY);
     },
-    // show topic
-    showTopic(text){
-      const data = text;
+    showModal(buttonNumber) {
+      this.modalVisible[buttonNumber] = true;
+      this.activeButton = buttonNumber;
     },
+    async handleModalOk(buttonNumber) {
+      this.modalVisible[buttonNumber] = false;
+      this.activeButton = buttonNumber;
+      try {
+        const db = getDatabase();
+        const buttonRef = ref(db, 'buttonSelections/' + new Date().getTime());
+        await set(buttonRef, {
+          buttonNumber: buttonNumber,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('Error saving button selection:', error);
+      }
+    }
   },
 };
 </script>
+
+
 <style lang="less" scoped>
 .journal-write {
   height: 100%;
+  display: flex;
+  flex-direction: column;
 
   &-header {
     display: flex;
@@ -98,17 +145,23 @@ export default {
     }
   }
 
-  &-save {
+  &-footer {
+    display: flex;
+    justify-content: space-between;
     margin-top: 20px;
-
     flex: none;
 
-
-    .ant-btn {
-      width: 100%;
-      height: 50px;
+    .footer-left {
+      display: flex;
+      gap: 8px;
     }
 
+    .footer-right {
+      .ant-btn {
+        width: 100%;
+        height: 50px;
+      }
+    }
   }
 }
 </style>
