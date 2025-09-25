@@ -136,7 +136,7 @@ export default {
         const styleText = styleMap[obj.buttonNumber] || "in default illustration style";
         const prompt = `${obj.content}. Please generate this ${styleText}.`;
 
-        const response = await fetch('https://moodjournal-2.onrender.com/api/generate-image', {
+        const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt }),
@@ -149,7 +149,7 @@ export default {
         const data = await response.json();
         console.log("[4] Received image_url from Flask:", data.image_url);
         
-        const imageUrlOnBackend = `https://moodjournal-2.onrender.com${data.image_url}`;
+        const imageUrlOnBackend = `https://moodjournal-2-api.onrender.com${data.image_url}`;
         console.log("[4.1] Full backend image URL:", imageUrlOnBackend);
 
         // 新增：上传到Firebase Storage
