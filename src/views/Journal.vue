@@ -168,16 +168,18 @@ export default {
         };
       });
     },
-    getWeekDay(date) {
-      const d = new Date(date);
-      return dayMap[d.getDay()];
+    getWeekDay(ymd) {
+      // ymd: "YYYY-MM-DD" → parse as local date
+      const [y, m, d] = String(ymd).split('-').map(Number);
+      const dt = new Date(y, m - 1, d); // local
+      return dayMap[dt.getDay()];
     },
-    formatEnDate(date) {
-      const d = new Date(date);
-      const m = monthMap[d.getMonth()].slice(0, 3);
-      const dd = d.getDate();
-      const y = d.getFullYear();
-      return `${m}.${dd}.${y}`;
+    formatEnDate(ymd) {
+      const [y, m, d] = String(ymd).split('-').map(Number);
+      const dt = new Date(y, m - 1, d); // local
+      const mon = monthMap[dt.getMonth()].slice(0, 3);
+      const dd = String(dt.getDate()).padStart(2, '0');
+      return `${mon}.${dd}.${y}`;
     },
     async updateJournalMood() {
       if (!this.currentJournal.id) return;

@@ -24,16 +24,11 @@ def generate_image():
         return '', 204
 
     try:
-        print("#DEBUG - request method:", request.method)
         data = request.json
-        print("#DEBUG - request JSON data:", data)
-
+        # style_preset = data.get("styleText")
         prompt = data.get("prompt") if data else None
         if not prompt:
-            print("#DEBUG - No prompt provided or empty prompt.")
             return jsonify({"error": "Prompt is required"}), 400
-
-        print("#DEBUG - Prompt from request data:", prompt)
 
         # Call Stable Diffusion
         print("#DEBUG - Sending request to Stable Diffusion API...")
@@ -47,6 +42,7 @@ def generate_image():
             data={
                 "prompt": prompt,
                 "output_format": "jpeg",
+                # "style_preset" : style_preset,
             },
         )
 
@@ -75,15 +71,10 @@ def generate_image():
             try:
                 error_content = response.json()
             except Exception as parse_err:
-                print("#DEBUG - Error parsing JSON from response:", parse_err)
                 error_content = response.text
-
-            print("#DEBUG - API request failed. Status code:", response.status_code)
-            print("#DEBUG - Error content returned by API:", error_content)
             return jsonify({"error": error_content}), response.status_code
 
     except Exception as e:
-        print("#DEBUG - An exception occurred:", str(e))
         return jsonify({"error": str(e)}), 500
 
 @app.route('/generated_images/<filename>')

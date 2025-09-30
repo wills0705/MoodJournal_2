@@ -39,7 +39,7 @@
                 v-if="dateMoodList[index] && dateMoodList[index].mood === moodList.length - ind  - 1 && dateMoodList[index].currentDate === item.fullDate"
                 :ref="dateMoodList[index] && dateMoodList[index].mood === moodList.length - ind  - 1 && dateMoodList[index].currentDate === item.fullDate ? `anchor${index}` : ''"
                 @click="showContent(dateMoodList[index])">
-                <img :src="dateMoodList[index].moondImg" alt="" class="mood-img">
+                <img :src="dateMoodList[index].sdImage" alt="wait approve" class="mood-img">
               </div>
             </div>
           </div>

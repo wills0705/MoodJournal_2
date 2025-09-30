@@ -132,6 +132,10 @@ export default {
           4: "in oil painting style",
           5: "in cyberpunk neon style"
         };
+        //analog-film anime cinematic comic-book digital-art enhance fantasy-art isometric 
+        //line-art low-poly modeling-compound neon-punk origami photographic pixel-art tile-texture
+
+        //pick 5 and set them in styleMap
 
         const styleText = styleMap[obj.buttonNumber] || "in default illustration style";
         const prompt = `${obj.content}. Please generate this ${styleText}.`;
@@ -140,6 +144,7 @@ export default {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt }),
+          //style_preset: JSON.stringify({ styleText }),
         });
 
         if (!response.ok) {
