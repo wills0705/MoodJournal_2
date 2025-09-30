@@ -70,7 +70,7 @@
           <div v-if="currentJournal.isApproved === false" class="pending-message">
             The picture is successfully generated, please wait patiently for review.
           </div>
-          <div v-else class="pending-message">
+          <div v-if="currentJournal.isApproved !== false && currentJournal.isApproved !== true" class="pending-message">
             The picture is rejected.
           </div>
           <div class="img-text">
