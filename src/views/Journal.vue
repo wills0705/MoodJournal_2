@@ -59,7 +59,7 @@
       <!-- Right Panel: AI Image (base64) or fallback cat -->
       <div class="journal-list-content-right">
         <div class="content-img">
-          <template v-if="currentJournal.isApproved">
+          <template v-if="currentJournal.isApproved === true">
             <img
               :src="currentJournal.sdImage"
               alt="Generated Image"
@@ -67,8 +67,11 @@
               @error="handleImageError"
             />
           </template>
-          <div v-else class="pending-message">
+          <div v-if="currentJournal.isApproved === false" class="pending-message">
             The picture is successfully generated, please wait patiently for review.
+          </div>
+          <div v-else class="pending-message">
+            The picture is rejected.
           </div>
           <div class="img-text">
             AI-Generated Image
