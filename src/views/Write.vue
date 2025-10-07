@@ -8,11 +8,11 @@
     </div>
     <div class="journal-write-footer">
       <div class="footer-left">
-        <a-button @click="showModal(1)" :type="activeButton === 1 ? 'primary' : 'default'">Pencil sketch</a-button>
-        <a-button @click="showModal(2)" :type="activeButton === 2 ? 'primary' : 'default'">Watercolor painting</a-button>
+        <a-button @click="showModal(1)" :type="activeButton === 1 ? 'primary' : 'default'">Line art</a-button>
+        <a-button @click="showModal(2)" :type="activeButton === 2 ? 'primary' : 'default'">Comic book</a-button>
         <a-button @click="showModal(3)" :type="activeButton === 3 ? 'primary' : 'default'">Pixel art</a-button>
-        <a-button @click="showModal(4)" :type="activeButton === 4 ? 'primary' : 'default'">Oil painting</a-button>
-        <a-button @click="showModal(5)" :type="activeButton === 5 ? 'primary' : 'default'">Cyberpunk neon</a-button>
+        <a-button @click="showModal(4)" :type="activeButton === 4 ? 'primary' : 'default'">Analog film</a-button>
+        <a-button @click="showModal(5)" :type="activeButton === 5 ? 'primary' : 'default'">Neon punk</a-button>
       </div>
       <div class="footer-right">
         <a-button type="primary" size="large" :loading="isLoading" @click="saveText">Save</a-button>
@@ -27,11 +27,11 @@
       @ok="handleModalOk(i)"
     >
       <template v-if="i === 1">
-        <p>Pencil Sketch Preview</p>
+        <p>Line Art Preview</p>
         <img src="/avatar-1.png" alt="Pencil Sketch" />
       </template>
       <template v-else-if="i === 2">
-        <p>Watercolor Painting Preview</p>
+        <p>Comic Book Preview</p>
         <img src="/avatar-1.png" alt="Watercolor Painting" />
       </template>
       <template v-else-if="i === 3">
@@ -39,11 +39,11 @@
         <img src="/avatar-1.png" alt="Pixel Art" />
       </template>
       <template v-else-if="i === 4">
-        <p>Oil Painting Preview</p>
+        <p>Analog Film Preview</p>
         <img src="/avatar-1.png" alt="Oil Painting" />
       </template>
       <template v-else-if="i === 5">
-        <p>Cyberpunk Neon Preview</p>
+        <p>Neon Punk Preview</p>
         <img src="/avatar-1.png" alt="Cyberpunk Neon" />
       </template>
     </a-modal>
