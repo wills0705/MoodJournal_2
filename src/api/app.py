@@ -15,23 +15,40 @@ CORS(app, supports_credentials=True, origins=["https://moodjournal-2-5uii.onrend
 
 # Stable Diffusion API configuration
 API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
-API_KEY = "sk-HIEZJFa0CsiGdJ5YFj3HypdNlegSSNv3X1I1RGsY8YV1YOQj" 
+API_KEY = "sk-HIEZJFa0CsiGdJ5YFj3HypdNlegSSNv3X1I1RGsY8YV1YOQj"  # consider env var
+
+# Allowed presets from Stability docs
+ALLOWED_PRESETS = {
+    "3d-model","analog-film","anime","cinematic","comic-book","digital-art",
+    "enhance","fantasy-art","isometric","line-art","low-poly","modeling-compound",
+    "neon-punk","origami","photographic","pixel-art","tile-texture"
+}
 
 @app.route('/api/generate-image', methods=['POST', 'OPTIONS'])
 def generate_image():
-    # Handle CORS preflight explicitly
     if request.method == 'OPTIONS':
         return '', 204
 
     try:
-        data = request.json
-        # style_preset = data.get("styleText")
-        prompt = data.get("prompt") if data else None
+        data = request.json or {}
+        prompt = data.get("prompt")
+        style_preset = data.get("style_preset")  # <-- NEW
+
         if not prompt:
             return jsonify({"error": "Prompt is required"}), 400
 
-        # Call Stable Diffusion
+        # validate style_preset (optional, but safer)
+        if style_preset and style_preset not in ALLOWED_PRESETS:
+            return jsonify({"error": f"Invalid style_preset: {style_preset}"}), 400
+
         print("#DEBUG - Sending request to Stable Diffusion API...")
+        payload = {
+            "prompt": prompt,
+            "output_format": "jpeg",
+        }
+        if style_preset:
+            payload["style_preset"] = style_preset
+
         response = requests.post(
             API_URL,
             headers={
@@ -39,11 +56,7 @@ def generate_image():
                 "accept": "image/*"
             },
             files={"none": ''},
-            data={
-                "prompt": prompt,
-                "output_format": "jpeg",
-                # "style_preset" : style_preset,
-            },
+            data=payload,
         )
 
         print("#DEBUG - Received response with status code:", response.status_code)
@@ -70,7 +83,7 @@ def generate_image():
         else:
             try:
                 error_content = response.json()
-            except Exception as parse_err:
+            except Exception:
                 error_content = response.text
             return jsonify({"error": error_content}), response.status_code
 

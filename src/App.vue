@@ -118,83 +118,68 @@ export default {
     async handleUpdate(obj) {
       try {
         console.log("[1] handleUpdate triggered with content:", obj.content);
-        // Add user and timestamp metadata
         const userId = auth.currentUser.uid;
         obj.userId = userId;
         obj.timestamp = Date.now();
-        obj.mood = 2; 
+        obj.mood = 2;
         obj.sdImage = "";
 
-        const styleMap = {
-          1: "in pencil sketch style",
-          2: "in watercolor painting style",
-          3: "in pixel art style",
-          4: "in oil painting style",
-          5: "in cyberpunk neon style"
+        // Map your 5 buttons to Stability style_preset enums
+        const presetMap = {
+          1: "line-art",       // Pencil sketch
+          2: "comic-book",     // Watercolor (closest "illustrative" preset)
+          3: "pixel-art",      // Pixel art
+          4: "analog-film",    // Oil painting (closest feel)
+          5: "neon-punk"       // Cyberpunk neon
         };
-        //analog-film anime cinematic comic-book digital-art enhance fantasy-art isometric 
-        //line-art low-poly modeling-compound neon-punk origami photographic pixel-art tile-texture
+        const style_preset = presetMap[obj.buttonNumber] || "digital-art";
+        const prompt = `${obj.content}`;
 
-        //pick 5 and set them in styleMap
-
-        const styleText = styleMap[obj.buttonNumber] || "in default illustration style";
-        const prompt = `${obj.content}. Please generate this ${styleText}.`;
-
+        // Call your Flask API with both fields
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
-          //style_preset: JSON.stringify({ styleText }),
+          body: JSON.stringify({ prompt, style_preset })
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to generate image');
-        }
+        if (!response.ok) throw new Error('Failed to generate image');
 
         const data = await response.json();
         console.log("[4] Received image_url from Flask:", data.image_url);
-        
+
         const imageUrlOnBackend = `https://moodjournal-2-api.onrender.com${data.image_url}`;
         console.log("[4.1] Full backend image URL:", imageUrlOnBackend);
 
-        // 新增：上传到Firebase Storage
+        // Upload to Firebase Storage
         const storage = getStorage();
         const storageRef = ref(storage, `generated_images/${Date.now()}.jpg`);
         console.log("[5] Fetching image blob from:", imageUrlOnBackend);
 
-        // 将base64转换为Blob
         const base64Response = await fetch(imageUrlOnBackend);
         const blob = await base64Response.blob();
         console.log("[5.1] Blob content type:", blob.type);
 
-        // 上传文件
         console.log("[6] Uploading blob to Firebase Storage...");
         const snapshot = await uploadBytes(storageRef, blob);
         const downloadURL = await getDownloadURL(snapshot.ref);
         console.log("[7] Uploaded image URL from Firebase:", downloadURL);
 
+        obj.sdImage = downloadURL;
 
-
-        const imageUrl = downloadURL; // Extract the image URL from the response
-
-        // Add the generated image URL to the journal object under the 'sdImage' field
-        obj.sdImage = imageUrl;
-
-        // Save the updated journal entry (with image) to Firestore
         console.log("[8] Saving final journal to Firestore...");
         const docRef = await addDoc(collection(db, 'journalList'), obj);
         obj.id = docRef.id;
 
-        // Add the new journal entry to the local journalList
         this.journalList.unshift(obj);
         console.log("[9] Journal successfully saved:", obj);
-        // Provide feedback to the user
+
         this.$message.success('Journal entry saved successfully');
       } catch (error) {
         console.error('Error adding document:', error);
         this.$message.error('Failed to save journal entry');
       }
     },
+
 
 
     async fetchJournalList() {
