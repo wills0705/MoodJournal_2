@@ -28,23 +28,23 @@
     >
       <template v-if="i === 1">
         <p>Line Art Preview</p>
-        <img src="/avatar-1.png" alt="Pencil Sketch" />
+        <img src="/lineart.png" alt="Line Art" />
       </template>
       <template v-else-if="i === 2">
         <p>Comic Book Preview</p>
-        <img src="/avatar-1.png" alt="Watercolor Painting" />
+        <img src="/comicbook.png" alt="Comic Book" />
       </template>
       <template v-else-if="i === 3">
         <p>Pixel Art Preview</p>
-        <img src="/avatar-1.png" alt="Pixel Art" />
+        <img src="/pixalart.png" alt="Pixel Art" />
       </template>
       <template v-else-if="i === 4">
         <p>Analog Film Preview</p>
-        <img src="/avatar-1.png" alt="Oil Painting" />
+        <img src="/analogfilm.png" alt="Analog Film" />
       </template>
       <template v-else-if="i === 5">
         <p>Neon Punk Preview</p>
-        <img src="/avatar-1.png" alt="Cyberpunk Neon" />
+        <img src="/neonpunk.png" alt="Neon Punk" />
       </template>
     </a-modal>
   </div>
