@@ -28,23 +28,23 @@
     >
       <template v-if="i === 1">
         <p>Line Art Preview</p>
-        <img src="/lineart.png" alt="Line Art" />
+        <img src="/lineart.png" alt="Line Art" class="modal-preview"/>
       </template>
       <template v-else-if="i === 2">
         <p>Comic Book Preview</p>
-        <img src="/comicbook.png" alt="Comic Book" />
+        <img src="/comicbook.png" alt="Comic Book" class="modal-preview"/>
       </template>
       <template v-else-if="i === 3">
         <p>Pixel Art Preview</p>
-        <img src="/pixalart.png" alt="Pixel Art" />
+        <img src="/pixalart.png" alt="Pixel Art" class="modal-preview"/>
       </template>
       <template v-else-if="i === 4">
         <p>Analog Film Preview</p>
-        <img src="/analogfilm.png" alt="Analog Film" />
+        <img src="/analogfilm.png" alt="Analog Film" class="modal-preview"/>
       </template>
       <template v-else-if="i === 5">
         <p>Neon Punk Preview</p>
-        <img src="/neonpunk.png" alt="Neon Punk" />
+        <img src="/neonpunk.png" alt="Neon Punk" class="modal-preview"/>
       </template>
     </a-modal>
   </div>
@@ -111,6 +111,30 @@ export default {
 };
 </script>
 
+::v-deep(.ant-modal-body) {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+::v-deep(.ant-modal) {
+  width: auto !important;
+  max-width: 90vw;
+  top: 24px;
+}
+
+::v-deep(.ant-modal-content) {
+  max-width: 90vw;
+}
+
+.modal-preview {
+  max-width: 100%;
+  max-height: 60vh;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  border-radius: 8px;
+}
 
 <style lang="less" scoped>
 .journal-write {
