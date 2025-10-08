@@ -111,6 +111,7 @@ export default {
 };
 </script>
 
+<style lang="less" scoped>
 ::v-deep(.ant-modal-body) {
   max-height: 70vh;
   overflow: auto;
@@ -135,8 +136,6 @@ export default {
   margin: 0 auto;
   border-radius: 8px;
 }
-
-<style lang="less" scoped>
 .journal-write {
   height: 100%;
   display: flex;
