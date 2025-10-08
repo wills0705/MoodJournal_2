@@ -52,8 +52,6 @@
             />
           </div>
         </div>
-
-
       </div>
 
       <!-- Right Panel: AI Image (base64) or fallback cat -->
@@ -70,30 +68,35 @@
           <div v-if="currentJournal.isApproved === false" class="pending-message">
             The picture is successfully generated, please wait patiently for review.
           </div>
-          <div v-if="currentJournal.isApproved !== false && currentJournal.isApproved !== true" class="pending-message">
+          <div
+            v-if="currentJournal.isApproved !== false && currentJournal.isApproved !== true"
+            class="pending-message"
+          >
             The picture is rejected.
           </div>
           <div class="img-text">
             AI-Generated Image
           </div>
+          
         </div>
+          <!-- Floating refresh button + caption -->
+        <button class="refresh-fab" @click="refreshCurrent">⟲ Refresh</button>
+        <div class="refresh-caption">check whether the image got approved</div>
 
-        
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { dayMap, monthMap } from '../lib/util';
-import moodSad from '../assets/image/mood-sad.png'
-import moodFrown from '../assets/image/mood-frown.png'
-import moodNormal from '../assets/image/mood-normal.png'
-import moodSmile from '../assets/image/mood-smile.png'
-import moodLaugh from '../assets/image/mood-laugh.png'
-
+import moodSad from '../assets/image/mood-sad.png';
+import moodFrown from '../assets/image/mood-frown.png';
+import moodNormal from '../assets/image/mood-normal.png';
+import moodSmile from '../assets/image/mood-smile.png';
+import moodLaugh from '../assets/image/mood-laugh.png';
 
 export default {
   name: 'journal',
@@ -113,17 +116,11 @@ export default {
         currentDate: '',
         timestamp: '',
         mood: 2,
-        sdImage: '' // base64 image (data URI) from Firestore
+        sdImage: ''
       },
-      faceList: [
-        moodSad,
-        moodFrown,
-        moodNormal,
-        moodSmile,
-        moodLaugh
-      ],
+      faceList: [moodSad, moodFrown, moodNormal, moodSmile, moodLaugh],
       currentFace: '',
-      fallbackCat: '' // We'll compute in mounted()
+      fallbackCat: ''
     };
   },
   watch: {
@@ -136,26 +133,18 @@ export default {
   },
   methods: {
     handleImageError(e) {
-    e.target.src = this.fallbackCat; // 显示备用图片
+      e.target.src = this.fallbackCat;
     },
     faceIconUrl(path) {
-      // Convert relative path to full URL
       return new URL(path, import.meta.url).href;
     },
     setFace(item, index) {
-      // Update local mood & face
       this.currentFace = this.faceIconUrl(item);
       this.currentJournal.mood = index;
-
-      // Persist mood to Firestore
       this.updateJournalMood();
     },
     showJournalDetail(journal) {
-      this.currentJournal = {
-        ...journal
-      };
-
-      // Update face icon based on mood
+      this.currentJournal = { ...journal };
       if (journal.mood >= 0 && journal.mood < this.faceList.length) {
         this.currentFace = this.faceIconUrl(this.faceList[journal.mood]);
       } else {
@@ -163,7 +152,7 @@ export default {
       }
     },
     filterJournal() {
-      this.list = this.journalList.map(item => {
+      this.list = this.journalList.map((item) => {
         return {
           ...item,
           enDate: this.formatEnDate(item.currentDate),
@@ -172,14 +161,13 @@ export default {
       });
     },
     getWeekDay(ymd) {
-      // ymd: "YYYY-MM-DD" → parse as local date
       const [y, m, d] = String(ymd).split('-').map(Number);
-      const dt = new Date(y, m - 1, d); // local
+      const dt = new Date(y, m - 1, d);
       return dayMap[dt.getDay()];
     },
     formatEnDate(ymd) {
       const [y, m, d] = String(ymd).split('-').map(Number);
-      const dt = new Date(y, m - 1, d); // local
+      const dt = new Date(y, m - 1, d);
       const mon = monthMap[dt.getMonth()].slice(0, 3);
       const dd = String(dt.getDate()).padStart(2, '0');
       return `${mon}.${dd}.${y}`;
@@ -193,11 +181,47 @@ export default {
       } catch (err) {
         console.error('Error updating mood in Firestore:', err);
       }
+    },
+    async refreshCurrent() {
+      try {
+        if (!this.currentJournal?.id) {
+          this.$message && this.$message.info('Open a journal first.');
+          return;
+        }
+        const ref = doc(db, 'journalList', this.currentJournal.id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          this.$message && this.$message.error('Journal not found.');
+          return;
+        }
+        const fresh = { id: snap.id, ...snap.data() };
+
+        // Update current panel
+        this.currentJournal = { ...this.currentJournal, ...fresh };
+
+        // Keep list in sync
+        this.list = this.list.map((it) =>
+          it.id === fresh.id ? { ...it, ...fresh } : it
+        );
+
+        // Optional: update face based on refreshed mood
+        if (
+          typeof fresh.mood === 'number' &&
+          fresh.mood >= 0 &&
+          fresh.mood < this.faceList.length
+        ) {
+          this.currentFace = this.faceIconUrl(this.faceList[fresh.mood]);
+        }
+
+        this.$message && this.$message.success('Refreshed!');
+      } catch (e) {
+        console.error('Refresh error:', e);
+        this.$message && this.$message.error('Failed to refresh.');
+      }
     }
   },
   mounted() {
     this.filterJournal();
-    // Precompute fallback cat image (relative or public path)
     this.fallbackCat = new URL('../assets/image/cat.jpeg', import.meta.url).href;
     this.currentFace = this.faceIconUrl('../assets/image/mood-normal.png');
   }
@@ -384,5 +408,37 @@ export default {
       }
     }
   }
+}
+
+/* Floating refresh UI */
+.refresh-fab {
+  position: fixed;
+  right: 190px;
+  bottom: 50px; /* leave space for caption below */
+  z-index: 1000;
+  background: #2d7dfe;
+  color: #fff;
+  border: none;
+  border-radius: 22px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+  transition: transform .08s ease, box-shadow .2s ease;
+}
+.refresh-fab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+}
+.refresh-caption {
+  position: fixed;
+  right: 190px;
+  bottom: 24px;
+  z-index: 999;
+  font-size: 12px;
+  color: rgba(0,0,0,0.55);
+  text-align: right;
+  max-width: 240px;
+  line-height: 1.2;
 }
 </style>
