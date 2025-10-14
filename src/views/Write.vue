@@ -4,7 +4,10 @@
       <div class="header-date">{{ currentDate }}</div>
     </div>
     <div class="journal-write-content">
-      <a-textarea v-model:value="journalContent" placeholder="Click here to start write your new journal" />
+      <a-textarea
+        v-model:value="journalContent"
+        placeholder="Click here to start write your new journal"
+      />
     </div>
     <div class="journal-write-footer">
       <div class="footer-left">
@@ -15,7 +18,9 @@
         <a-button @click="showModal(5)" :type="activeButton === 5 ? 'primary' : 'default'">Neon punk</a-button>
       </div>
       <div class="footer-right">
-        <a-button type="primary" size="large" :loading="isLoading" @click="saveText">Save</a-button>
+        <a-button type="primary" size="large" :loading="isLoading" @click="saveText">
+          Save
+        </a-button>
       </div>
     </div>
     <a-modal
@@ -29,23 +34,23 @@
     >
       <template v-if="i === 1">
         <p>Line Art Preview</p>
-        <img src="/lineart.png" alt="Line Art" class="modal-preview"/>
+        <img src="/lineart.png" alt="Line Art" class="modal-preview" />
       </template>
       <template v-else-if="i === 2">
         <p>Comic Book Preview</p>
-        <img src="/comicbook.png" alt="Comic Book" class="modal-preview"/>
+        <img src="/comicbook.png" alt="Comic Book" class="modal-preview" />
       </template>
       <template v-else-if="i === 3">
         <p>Pixel Art Preview</p>
-        <img src="/pixalart.png" alt="Pixel Art" class="modal-preview"/>
+        <img src="/pixalart.png" alt="Pixel Art" class="modal-preview" />
       </template>
       <template v-else-if="i === 4">
         <p>Analog Film Preview</p>
-        <img src="/analogfilm.png" alt="Analog Film" class="modal-preview"/>
+        <img src="/analogfilm.png" alt="Analog Film" class="modal-preview" />
       </template>
       <template v-else-if="i === 5">
         <p>Neon Punk Preview</p>
-        <img src="/neonpunk.png" alt="Neon Punk" class="modal-preview"/>
+        <img src="/neonpunk.png" alt="Neon Punk" class="modal-preview" />
       </template>
     </a-modal>
   </div>
@@ -59,7 +64,10 @@ const SAVE_DELAY = 1000;
 
 export default {
   name: 'write',
-  props: { journalList: { type: Array, default: [] } },
+  props: {
+    journalList: { type: Array, default: [] },
+    saveStatus: { type: String, default: 'idle' }
+  },
   data() {
     return {
       journalContent: '',
@@ -69,11 +77,15 @@ export default {
       activeButton: null
     }
   },
+  watch: {
+    saveStatus(newVal) {
+      if (newVal === 'success' || newVal === 'error' || newVal === 'idle') {
+        this.isLoading = false;
+      }
+    }
+  },
   methods: {
     clearText() { this.journalContent = '' },
-    stopLoading() {
-    this.isLoading = false;
-    },
     saveText() {
       if (!this.journalContent) return;
       this.isLoading = true;
@@ -88,7 +100,6 @@ export default {
         };
         this.$emit('updateJournal', textObj);
         this.clearText();
-        this.isLoading = false;
       }, SAVE_DELAY);
     },
     showModal(buttonNumber) {
@@ -97,9 +108,7 @@ export default {
     },
     async handleModalCancel(i) {
       this.modalVisible[i] = false;
-      if (this.activeButton === i) {
-        this.activeButton = null;
-      }
+      if (this.activeButton === i) this.activeButton = null;
     },
     async handleModalOk(buttonNumber) {
       this.modalVisible[buttonNumber] = false;
@@ -107,10 +116,7 @@ export default {
       try {
         const db = getDatabase();
         const buttonRef = ref(db, 'buttonSelections/' + new Date().getTime());
-        await set(buttonRef, {
-          buttonNumber: buttonNumber,
-          timestamp: new Date().toISOString()
-        });
+        await set(buttonRef, { buttonNumber, timestamp: new Date().toISOString() });
       } catch (error) {
         console.error('Error saving button selection:', error);
       }
@@ -124,13 +130,11 @@ export default {
   max-height: 70vh;
   overflow: auto;
 }
-
 ::v-deep(.ant-modal) {
   width: auto !important;
   max-width: 90vw;
   top: 24px;
 }
-
 ::v-deep(.ant-modal-content) {
   max-width: 90vw;
 }
@@ -144,6 +148,7 @@ export default {
   margin: 0 auto;
   border-radius: 8px;
 }
+
 .journal-write {
   height: 100%;
   display: flex;

@@ -10,8 +10,12 @@
       <!-- Main App Components -->
       <div class="app-container" v-else>
         <div class="mood-journal-app-content-header">
-          <div :class="['tab-item', activeIndex === index ? 'active-item' : '']" v-for="(item, index) in tabList"
-            :key="index" @click="handleClick(index)">
+          <div
+            :class="['tab-item', activeIndex === index ? 'active-item' : '']"
+            v-for="(item, index) in tabList"
+            :key="index"
+            @click="handleClick(index)"
+          >
             {{ item.name }}
           </div>
           <!-- Logout Button -->
@@ -19,8 +23,12 @@
         </div>
         <div class="mood-journal-app-content-content">
           <keep-alive exclude="analysis">
-            <component :is="currentComponent" :journalList="journalList" @updateJournal="handleUpdate">
-            </component>
+            <component
+              :is="currentComponent"
+              :journalList="journalList"
+              :saveStatus="saveStatus"
+              @updateJournal="handleUpdate"
+            />
           </keep-alive>
         </div>
       </div>
@@ -37,65 +45,40 @@ import Signup from './components/Signup.vue';
 import Login from './components/Login.vue';
 
 import { auth, db } from './firebase';
-import {
-  collection,
-  getDocs,
-  addDoc,
-  query,
-  orderBy,
-} from 'firebase/firestore';
-import { 
-  getStorage, 
-  ref, 
-  uploadBytes, 
-  getDownloadURL 
-} from "firebase/storage";
+import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 export default {
-  components: {
-    Write,
-    Journal,
-    Analysis,
-    Signup,
-    Login,
-  },
+  components: { Write, Journal, Analysis, Signup, Login },
   data() {
     return {
-      journalList: [
-        
-      ],
+      journalList: [],
       tabList: [
-        {
-          name: 'Write new',
-          componentName: 'write',
-        },
-        {
-          name: 'Prev Journal',
-          componentName: 'journal',
-        },
-        {
-          name: 'Analytics',
-          componentName: 'analysis',
-        },
+        { name: 'Write new',   componentName: 'write'   },
+        { name: 'Prev Journal', componentName: 'journal' },
+        { name: 'Analytics',    componentName: 'analysis' },
       ],
       activeIndex: 0,
       currentComponent: 'write',
       isAuthenticated: false,
       showSignup: false,
+
+      // NEW: tell child when saving starts/ends
+      // 'idle' | 'saving' | 'success' | 'error'
+      saveStatus: 'idle'
     };
   },
   created() {
-    // Monitor authentication state
-     onAuthStateChanged(auth, (user) => {
-       if (user) {
-         this.isAuthenticated = true;
-         this.fetchJournalList();
-       } else {
-         this.isAuthenticated = false;
-         this.journalList = [];
-       }
-     });
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        this.isAuthenticated = true;
+        this.fetchJournalList();
+      } else {
+        this.isAuthenticated = false;
+        this.journalList = [];
+      }
+    });
   },
   methods: {
     toggleAuthForm() {
@@ -116,6 +99,7 @@ export default {
     },
 
     async handleUpdate(obj) {
+      this.saveStatus = 'saving';
       try {
         console.log("[1] handleUpdate triggered with content:", obj.content);
         const userId = auth.currentUser.uid;
@@ -124,75 +108,60 @@ export default {
         obj.mood = 2;
         obj.sdImage = "";
 
-        // Map your 5 buttons to Stability style_preset enums
         const presetMap = {
-          1: "line-art",       // Pencil sketch
-          2: "comic-book",     // Watercolor (closest "illustrative" preset)
-          3: "pixel-art",      // Pixel art
-          4: "analog-film",    // Oil painting (closest feel)
-          5: "neon-punk"       // Cyberpunk neon
+          1: "line-art",
+          2: "comic-book",
+          3: "pixel-art",
+          4: "analog-film",
+          5: "neon-punk"
         };
         const style_preset = presetMap[obj.buttonNumber] || "digital-art";
         const prompt = `${obj.content}`;
 
-        // Call your Flask API with both fields
+        // Call Flask API with prompt + style_preset
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, style_preset })
         });
-
         if (!response.ok) throw new Error('Failed to generate image');
 
         const data = await response.json();
-        console.log("[4] Received image_url from Flask:", data.image_url);
-
         const imageUrlOnBackend = `https://moodjournal-2-api.onrender.com${data.image_url}`;
-        console.log("[4.1] Full backend image URL:", imageUrlOnBackend);
 
-        // Upload to Firebase Storage
+        // Upload image to Firebase Storage
         const storage = getStorage();
         const storageRef = ref(storage, `generated_images/${Date.now()}.jpg`);
-        console.log("[5] Fetching image blob from:", imageUrlOnBackend);
-
         const base64Response = await fetch(imageUrlOnBackend);
         const blob = await base64Response.blob();
-        console.log("[5.1] Blob content type:", blob.type);
-
-        console.log("[6] Uploading blob to Firebase Storage...");
         const snapshot = await uploadBytes(storageRef, blob);
         const downloadURL = await getDownloadURL(snapshot.ref);
-        console.log("[7] Uploaded image URL from Firebase:", downloadURL);
-
         obj.sdImage = downloadURL;
 
-        console.log("[8] Saving final journal to Firestore...");
         const docRef = await addDoc(collection(db, 'journalList'), obj);
         obj.id = docRef.id;
 
         this.journalList.unshift(obj);
-        console.log("[9] Journal successfully saved:", obj);
 
         this.$message.success('Journal entry saved successfully');
+        this.saveStatus = 'success';
+        setTimeout(() => (this.saveStatus = 'idle'), 800);
       } catch (error) {
         console.error('Error adding document:', error);
         this.$message.error('Failed to save journal entry');
+        this.saveStatus = 'error';
+        setTimeout(() => (this.saveStatus = 'idle'), 1200);
       }
     },
 
-
-
     async fetchJournalList() {
       try {
-        const userId = auth.currentUser.uid; // Get current user's UID
-        const q = query(
-          collection(db, 'journalList'),
-          orderBy('timestamp', 'desc')
-        );
+        const userId = auth.currentUser.uid;
+        const q = query(collection(db, 'journalList'), orderBy('timestamp', 'desc'));
         const querySnapshot = await getDocs(q);
         this.journalList = querySnapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((entry) => entry.userId === userId); // Only include entries from the current user
+          .filter((entry) => entry.userId === userId);
       } catch (error) {
         console.error('Error fetching journalList:', error);
         this.journalList = [];
