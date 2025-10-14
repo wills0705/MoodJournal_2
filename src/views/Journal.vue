@@ -81,7 +81,7 @@
         </div>
           <!-- Floating refresh button + caption -->
         <button class="refresh-fab" @click="refreshCurrent">⟲ Refresh</button>
-        <div class="refresh-caption">check whether the image got approved</div>
+        <div class="refresh-caption">Click the Refresh button to check whether the image got approved</div>
 
       </div>
     </div>
@@ -414,7 +414,7 @@ export default {
 .refresh-fab {
   position: fixed;
   right: 190px;
-  bottom: 50px; /* leave space for caption below */
+  bottom: 50px;
   z-index: 1000;
   background: #2d7dfe;
   color: #fff;
@@ -438,7 +438,7 @@ export default {
   font-size: 12px;
   color: rgba(0,0,0,0.55);
   text-align: right;
-  max-width: 240px;
+  max-width: 400px;
   line-height: 1.2;
 }
 </style>
