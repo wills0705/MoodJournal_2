@@ -25,6 +25,7 @@
       :title="`Style ${i}`"
       :closable="false"
       @ok="handleModalOk(i)"
+      @cancel="handleModalCancel(i)"
     >
       <template v-if="i === 1">
         <p>Line Art Preview</p>
@@ -92,6 +93,12 @@ export default {
     showModal(buttonNumber) {
       this.modalVisible[buttonNumber] = true;
       this.activeButton = buttonNumber;
+    },
+    async handleModalCancel(i) {
+      this.modalVisible[i] = false;
+      if (this.activeButton === i) {
+        this.activeButton = null;
+      }
     },
     async handleModalOk(buttonNumber) {
       this.modalVisible[buttonNumber] = false;
