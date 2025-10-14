@@ -88,6 +88,7 @@ export default {
         };
         this.$emit('updateJournal', textObj);
         this.clearText();
+        this.isLoading = false;
       }, SAVE_DELAY);
     },
     showModal(buttonNumber) {
