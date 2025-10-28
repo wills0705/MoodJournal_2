@@ -77,12 +77,11 @@
           <div class="img-text">
             AI-Generated Image
           </div>
-          
         </div>
-          <!-- Floating refresh button + caption -->
+
+        <!-- Floating refresh button + caption -->
         <button class="refresh-fab" @click="refreshCurrent">⟲ Refresh</button>
         <div class="refresh-caption">Click the Refresh button to check whether the image got approved</div>
-
       </div>
     </div>
   </div>
@@ -126,6 +125,26 @@ export default {
   watch: {
     journalList() {
       this.filterJournal();
+      // keep currently opened entry in sync with freshest data
+      if (this.currentJournal?.id) {
+        const fresh = this.journalList.find(j => j.id === this.currentJournal.id);
+        if (fresh) {
+          this.currentJournal = {
+            ...this.currentJournal,
+            ...fresh,
+            enDate: this.formatEnDate(fresh.currentDate),
+            weekDay: this.getWeekDay(fresh.currentDate)
+          };
+          // update face if mood changed
+          if (
+            typeof fresh.mood === 'number' &&
+            fresh.mood >= 0 &&
+            fresh.mood < this.faceList.length
+          ) {
+            this.currentFace = this.faceIconUrl(this.faceList[fresh.mood]);
+          }
+        }
+      }
     }
   },
   activated() {
@@ -152,6 +171,7 @@ export default {
       }
     },
     filterJournal() {
+      // rebuild left list with derived fields
       this.list = this.journalList.map((item) => {
         return {
           ...item,
@@ -197,14 +217,19 @@ export default {
         const fresh = { id: snap.id, ...snap.data() };
 
         // Update current panel
-        this.currentJournal = { ...this.currentJournal, ...fresh };
+        this.currentJournal = {
+          ...this.currentJournal,
+          ...fresh,
+          enDate: this.formatEnDate(fresh.currentDate),
+          weekDay: this.getWeekDay(fresh.currentDate)
+        };
 
         // Keep list in sync
         this.list = this.list.map((it) =>
-          it.id === fresh.id ? { ...it, ...fresh } : it
+          it.id === fresh.id ? { ...it, ...fresh, enDate: this.formatEnDate(fresh.currentDate), weekDay: this.getWeekDay(fresh.currentDate) } : it
         );
 
-        // Optional: update face based on refreshed mood
+        // Update face if needed
         if (
           typeof fresh.mood === 'number' &&
           fresh.mood >= 0 &&

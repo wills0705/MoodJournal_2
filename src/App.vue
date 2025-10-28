@@ -18,9 +18,9 @@
           >
             {{ item.name }}
           </div>
-          <!-- Logout Button -->
           <button @click="logout" class="logout-button">Log Out</button>
         </div>
+
         <div class="mood-journal-app-content-content">
           <keep-alive exclude="analysis">
             <component
@@ -45,7 +45,15 @@ import Signup from './components/Signup.vue';
 import Login from './components/Login.vue';
 
 import { auth, db } from './firebase';
-import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  where
+} from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
@@ -55,7 +63,7 @@ export default {
     return {
       journalList: [],
       tabList: [
-        { name: 'Write new',   componentName: 'write'   },
+        { name: 'Write new',    componentName: 'write'   },
         { name: 'Prev Journal', componentName: 'journal' },
         { name: 'Analytics',    componentName: 'analysis' },
       ],
@@ -64,44 +72,101 @@ export default {
       isAuthenticated: false,
       showSignup: false,
 
-      // NEW: tell child when saving starts/ends
       // 'idle' | 'saving' | 'success' | 'error'
-      saveStatus: 'idle'
+      saveStatus: 'idle',
+
+      // current realtime subscription
+      _unsub: null
     };
   },
   created() {
     onAuthStateChanged(auth, (user) => {
+      if (this._unsub) { this._unsub(); this._unsub = null; }
       if (user) {
         this.isAuthenticated = true;
-        this.fetchJournalList();
+        this.startRealtime(user.uid);   // try composite (where+orderBy)
       } else {
         this.isAuthenticated = false;
         this.journalList = [];
       }
     });
   },
+  beforeUnmount() {
+    if (this._unsub) { this._unsub(); this._unsub = null; }
+  },
   methods: {
-    toggleAuthForm() {
-      this.showSignup = !this.showSignup;
-    },
+    toggleAuthForm() { this.showSignup = !this.showSignup; },
+
     async logout() {
       try {
         await signOut(auth);
         this.$message.success('Logged out successfully');
-      } catch (error) {
-        console.error('Error logging out:', error);
+      } catch (e) {
+        console.error('Error logging out:', e);
         this.$message.error('Failed to log out');
       }
     },
+
     handleClick(index) {
       this.activeIndex = index;
       this.currentComponent = this.tabList[index].componentName;
     },
 
+    // ===== Realtime with graceful fallback =====
+    startRealtime(userId) {
+      // Try composite: requires index (userId + timestamp desc)
+      const qRef = query(
+        collection(db, 'journalList'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc')
+      );
+
+      this._unsub = onSnapshot(
+        qRef,
+        (snap) => {
+          const rows = [];
+          snap.forEach((doc) => rows.push({ id: doc.id, ...doc.data() }));
+          this.journalList = rows; // already sorted by server
+        },
+        (err) => {
+          console.warn('onSnapshot error:', err);
+          // Firestore uses FAILED_PRECONDITION for missing composite index
+          if (String(err.code).toLowerCase().includes('failed-precondition')) {
+            // fall back to no index: where only, client-side sort
+            this.startRealtimeNoIndex(userId);
+          } else {
+            // unexpected error: keep list empty to avoid stale UI
+            this.journalList = [];
+          }
+        }
+      );
+    },
+
+    startRealtimeNoIndex(userId) {
+      if (this._unsub) { this._unsub(); this._unsub = null; }
+      const qRef = query(
+        collection(db, 'journalList'),
+        where('userId', '==', userId)
+      );
+      this._unsub = onSnapshot(
+        qRef,
+        (snap) => {
+          const rows = [];
+          snap.forEach((doc) => rows.push({ id: doc.id, ...doc.data() }));
+          // client-side sort to match previous behavior
+          rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          this.journalList = rows;
+        },
+        (err) => {
+          console.error('onSnapshot fallback error:', err);
+          this.journalList = [];
+        }
+      );
+    },
+
     async handleUpdate(obj) {
       this.saveStatus = 'saving';
       try {
-        console.log("[1] handleUpdate triggered with content:", obj.content);
         const userId = auth.currentUser.uid;
         obj.userId = userId;
         obj.timestamp = Date.now();
@@ -118,7 +183,6 @@ export default {
         const style_preset = presetMap[obj.buttonNumber] || "digital-art";
         const prompt = `${obj.content}`;
 
-        // Call Flask API with prompt + style_preset
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -129,7 +193,6 @@ export default {
         const data = await response.json();
         const imageUrlOnBackend = `https://moodjournal-2-api.onrender.com${data.image_url}`;
 
-        // Upload image to Firebase Storage
         const storage = getStorage();
         const storageRef = ref(storage, `generated_images/${Date.now()}.jpg`);
         const base64Response = await fetch(imageUrlOnBackend);
@@ -138,11 +201,8 @@ export default {
         const downloadURL = await getDownloadURL(snapshot.ref);
         obj.sdImage = downloadURL;
 
-        const docRef = await addDoc(collection(db, 'journalList'), obj);
-        obj.id = docRef.id;
-
-        this.journalList.unshift(obj);
-
+        await addDoc(collection(db, 'journalList'), obj);
+        // No manual push needed—onSnapshot updates UI.
         this.$message.success('Journal entry saved successfully');
         this.saveStatus = 'success';
         setTimeout(() => (this.saveStatus = 'idle'), 800);
@@ -154,6 +214,7 @@ export default {
       }
     },
 
+    // Optional fallback method (not used for initial load anymore)
     async fetchJournalList() {
       try {
         const userId = auth.currentUser.uid;
@@ -186,11 +247,7 @@ export default {
     display: flex;
     flex-direction: column;
 
-    .app-container {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
+    .app-container { height: 100%; display: flex; flex-direction: column; }
 
     &-header {
       flex: none;
@@ -204,7 +261,6 @@ export default {
         transition: font-size 0.1s ease;
         cursor: pointer;
       }
-
       .active-item {
         font-size: 18px;
         font-weight: bold;
@@ -213,14 +269,9 @@ export default {
       }
     }
 
-    &-content {
-      flex: auto;
-      overflow: hidden;
-      margin-top: 20px;
-    }
+    &-content { flex: auto; overflow: hidden; margin-top: 20px; }
   }
 }
-
 .logout-button {
   margin-left: auto;
   padding: 4px 12px;
