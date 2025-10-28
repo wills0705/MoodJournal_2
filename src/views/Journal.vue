@@ -78,10 +78,6 @@
             AI-Generated Image
           </div>
         </div>
-
-        <!-- Floating refresh button + caption -->
-        <button class="refresh-fab" @click="refreshCurrent">⟲ Refresh</button>
-        <div class="refresh-caption">Click the Refresh button to check whether the image got approved</div>
       </div>
     </div>
   </div>
