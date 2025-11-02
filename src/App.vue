@@ -174,7 +174,7 @@ export default {
           return;
         }
         obj.userId = user.uid;
-        obj.userEmail = user.email || null;
+        obj.userEmail = user.email;
         obj.timestamp = Date.now();
         obj.mood = 2;
         obj.sdImage = "";
