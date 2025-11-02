@@ -167,8 +167,14 @@ export default {
     async handleUpdate(obj) {
       this.saveStatus = 'saving';
       try {
-        const userId = auth.currentUser.uid;
-        obj.userId = userId;
+        const user = auth.currentUser;
+        if (!user) {
+          this.$message?.error('You must be logged in.');
+          this.saveStatus = 'idle';
+          return;
+        }
+        obj.userId = user.uid;
+        obj.userEmail = user.email || null;
         obj.timestamp = Date.now();
         obj.mood = 2;
         obj.sdImage = "";
@@ -202,19 +208,17 @@ export default {
         obj.sdImage = downloadURL;
 
         await addDoc(collection(db, 'journalList'), obj);
-        // No manual push needed—onSnapshot updates UI.
-        this.$message.success('Journal entry saved successfully');
+        this.$message?.success('Journal entry saved successfully');
         this.saveStatus = 'success';
         setTimeout(() => (this.saveStatus = 'idle'), 800);
       } catch (error) {
         console.error('Error adding document:', error);
-        this.$message.error('Failed to save journal entry');
+        this.$message?.error('Failed to save journal entry');
         this.saveStatus = 'error';
         setTimeout(() => (this.saveStatus = 'idle'), 1200);
       }
     },
 
-    // Optional fallback method (not used for initial load anymore)
     async fetchJournalList() {
       try {
         const userId = auth.currentUser.uid;
