@@ -1,19 +1,19 @@
 <template>
   <div class="mood-journal-app">
     <div class="mood-journal-app-content">
-      <!-- Authentication Components -->
+      <!-- Auth -->
       <div v-if="!isAuthenticated">
         <Signup v-if="showSignup" @switch-auth="toggleAuthForm" />
         <Login v-else @switch-auth="toggleAuthForm" />
       </div>
 
-      <!-- Main App Components -->
+      <!-- Main -->
       <div class="app-container" v-else>
         <div class="mood-journal-app-content-header">
           <div
-            :class="['tab-item', activeIndex === index ? 'active-item' : '']"
             v-for="(item, index) in tabList"
             :key="index"
+            :class="['tab-item', activeIndex === index ? 'active-item' : '']"
             @click="handleClick(index)"
           >
             {{ item.name }}
@@ -75,46 +75,53 @@ export default {
       // 'idle' | 'saving' | 'success' | 'error'
       saveStatus: 'idle',
 
-      // current realtime subscription
-      _unsub: null
+      // realtime sub
+      _unsub: null,
+
+      // --- sound for approval ---
+      _audio: null,                  // HTMLAudioElement
+      _approvalState: {},            // { [id]: boolean } last seen approval state
+      _primedApprovalWatch: false    // avoid dinging on initial load
     };
   },
+
   created() {
+    this._audio = new Audio('/sounds/notify.wav');
+    this._audio.preload = 'auto';
+
     onAuthStateChanged(auth, (user) => {
       if (this._unsub) { this._unsub(); this._unsub = null; }
+      this._approvalState = {};
+      this._primedApprovalWatch = false;
+
       if (user) {
         this.isAuthenticated = true;
-        this.startRealtime(user.uid);   // try composite (where+orderBy)
+        this.startRealtime(user.uid);
       } else {
         this.isAuthenticated = false;
         this.journalList = [];
       }
     });
   },
+
   beforeUnmount() {
     if (this._unsub) { this._unsub(); this._unsub = null; }
   },
+
   methods: {
+    // ---------- UI ----------
     toggleAuthForm() { this.showSignup = !this.showSignup; },
-
     async logout() {
-      try {
-        await signOut(auth);
-        this.$message.success('Logged out successfully');
-      } catch (e) {
-        console.error('Error logging out:', e);
-        this.$message.error('Failed to log out');
-      }
+      try { await signOut(auth); this.$message.success('Logged out successfully'); }
+      catch (e) { console.error('Error logging out:', e); this.$message.error('Failed to log out'); }
     },
-
     handleClick(index) {
       this.activeIndex = index;
       this.currentComponent = this.tabList[index].componentName;
     },
 
-    // ===== Realtime with graceful fallback =====
+    // ---------- Realtime with approval ding ----------
     startRealtime(userId) {
-      // Try composite: requires index (userId + timestamp desc)
       const qRef = query(
         collection(db, 'journalList'),
         where('userId', '==', userId),
@@ -125,17 +132,34 @@ export default {
         qRef,
         (snap) => {
           const rows = [];
-          snap.forEach((doc) => rows.push({ id: doc.id, ...doc.data() }));
-          this.journalList = rows; // already sorted by server
+          const latestMap = {};
+          snap.forEach((doc) => {
+            const data = { id: doc.id, ...doc.data() };
+            rows.push(data);
+            latestMap[doc.id] = !!data.isApproved;  // normalize to bool
+          });
+          this.journalList = rows;
+
+          // First snapshot: record baseline, no ding
+          if (!this._primedApprovalWatch) {
+            this._approvalState = latestMap;
+            this._primedApprovalWatch = true;
+            return;
+          }
+
+          // Subsequent snapshots: ding on false/undefined -> true transitions
+          Object.keys(latestMap).forEach((id) => {
+            const prev = !!this._approvalState[id];
+            const now = !!latestMap[id];
+            if (!prev && now) this._ding();
+          });
+          this._approvalState = latestMap;
         },
         (err) => {
           console.warn('onSnapshot error:', err);
-          // Firestore uses FAILED_PRECONDITION for missing composite index
           if (String(err.code).toLowerCase().includes('failed-precondition')) {
-            // fall back to no index: where only, client-side sort
             this.startRealtimeNoIndex(userId);
           } else {
-            // unexpected error: keep list empty to avoid stale UI
             this.journalList = [];
           }
         }
@@ -144,18 +168,31 @@ export default {
 
     startRealtimeNoIndex(userId) {
       if (this._unsub) { this._unsub(); this._unsub = null; }
-      const qRef = query(
-        collection(db, 'journalList'),
-        where('userId', '==', userId)
-      );
+      const qRef = query(collection(db, 'journalList'), where('userId', '==', userId));
       this._unsub = onSnapshot(
         qRef,
         (snap) => {
           const rows = [];
-          snap.forEach((doc) => rows.push({ id: doc.id, ...doc.data() }));
-          // client-side sort to match previous behavior
+          const latestMap = {};
+          snap.forEach((doc) => {
+            const data = { id: doc.id, ...doc.data() };
+            rows.push(data);
+            latestMap[doc.id] = !!data.isApproved;
+          });
           rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
           this.journalList = rows;
+
+          if (!this._primedApprovalWatch) {
+            this._approvalState = latestMap;
+            this._primedApprovalWatch = true;
+            return;
+          }
+          Object.keys(latestMap).forEach((id) => {
+            const prev = !!this._approvalState[id];
+            const now = !!latestMap[id];
+            if (!prev && now) this._ding();
+          });
+          this._approvalState = latestMap;
         },
         (err) => {
           console.error('onSnapshot fallback error:', err);
@@ -164,34 +201,30 @@ export default {
       );
     },
 
+    _ding() {
+      if (!this._audio) return;
+      try { this._audio.currentTime = 0; this._audio.play(); } catch (_) { /* ignore autoplay blocks */ }
+    },
+
+    // ---------- Save entry ----------
     async handleUpdate(obj) {
       this.saveStatus = 'saving';
       try {
         const user = auth.currentUser;
-        if (!user) {
-          this.$message?.error('You must be logged in.');
-          this.saveStatus = 'idle';
-          return;
-        }
+        if (!user) { this.$message?.error('You must be logged in.'); this.saveStatus = 'idle'; return; }
+
         obj.userId = user.uid;
         obj.userEmail = user.email;
         obj.timestamp = Date.now();
         obj.mood = 2;
         obj.sdImage = "";
 
-        const presetMap = {
-          1: "line-art",
-          2: "comic-book",
-          3: "pixel-art",
-          4: "analog-film",
-          5: "neon-punk"
-        };
+        const presetMap = { 1: "line-art", 2: "comic-book", 3: "pixel-art", 4: "analog-film", 5: "neon-punk" };
         const style_preset = presetMap[obj.buttonNumber] || "digital-art";
         const prompt = `${obj.content}`;
 
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, style_preset })
         });
         if (!response.ok) throw new Error('Failed to generate image');
@@ -219,6 +252,7 @@ export default {
       }
     },
 
+    // (kept for completeness; not used when realtime is on)
     async fetchJournalList() {
       try {
         const userId = auth.currentUser.uid;
