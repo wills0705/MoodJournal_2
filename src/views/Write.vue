@@ -16,15 +16,23 @@
         <a-button @click="showModal(3)" :type="activeButton === 3 ? 'primary' : 'default'">Pixel art</a-button>
         <a-button @click="showModal(4)" :type="activeButton === 4 ? 'primary' : 'default'">Analog film</a-button>
         <a-button @click="showModal(5)" :type="activeButton === 5 ? 'primary' : 'default'">Neon punk</a-button>
+        <a-button @click="showModal(6)" :type="activeButton === 6 ? 'primary' : 'default'">Digital art</a-button>
       </div>
       <div class="footer-right">
-        <a-button type="primary" size="large" :loading="isLoading" @click="saveText">
+        <a-button
+          type="primary"
+          size="large"
+          :loading="isLoading"
+          :disabled="!canSave"
+          aria-disabled="!canSave"
+          @click="saveText"
+        >
           Save
         </a-button>
       </div>
     </div>
     <a-modal
-      v-for="i in 5"
+      v-for="i in 6"
       :key="i"
       :open="modalVisible[i]"
       :title="`Style ${i}`"
@@ -46,11 +54,15 @@
       </template>
       <template v-else-if="i === 4">
         <p>Analog Film Preview</p>
-        <img src="/analogfilm.png" alt="Analog Film" class="modal-preview" />
+        <img src="/analogfilm.jpg" alt="Analog Film" class="modal-preview" />
       </template>
       <template v-else-if="i === 5">
         <p>Neon Punk Preview</p>
         <img src="/neonpunk.png" alt="Neon Punk" class="modal-preview" />
+      </template>
+      <template v-else-if="i === 6">
+        <p>Digital Art Preview</p>
+        <img src="/digitalart.jpg" alt="Digital Art" class="modal-preview" />
       </template>
     </a-modal>
   </div>
@@ -73,8 +85,13 @@ export default {
       journalContent: '',
       currentDate: formatDate(new Date()),
       isLoading: false,
-      modalVisible: { 1: false, 2: false, 3: false, 4: false, 5: false },
+      modalVisible: { 1: false, 2: false, 3: false, 4: false, 5: false, 6: false },
       activeButton: null
+    }
+  },
+  computed: {
+    canSave() {
+      return !!this.activeButton && !!this.journalContent.trim();
     }
   },
   watch: {
@@ -87,14 +104,23 @@ export default {
   methods: {
     clearText() { this.journalContent = '' },
     saveText() {
-      if (!this.journalContent) return;
+      // Hard guard: require content and style selection
+      if (!this.journalContent.trim()) {
+        this.$message?.warning?.('Please write something first.');
+        return;
+      }
+      if (!this.activeButton) {
+        this.$message?.warning?.('Please choose an image style.');
+        return;
+      }
+
       this.isLoading = true;
       setTimeout(() => {
         const d = new Date();
         const textObj = {
           currentDate: formatDate(d),
           currentTime: d,
-          content: this.journalContent,
+          content: this.journalContent.trim(),
           isApproved: false,
           buttonNumber: this.activeButton
         };
@@ -126,18 +152,9 @@ export default {
 </script>
 
 <style lang="less" scoped>
-::v-deep(.ant-modal-body) {
-  max-height: 70vh;
-  overflow: auto;
-}
-::v-deep(.ant-modal) {
-  width: auto !important;
-  max-width: 90vw;
-  top: 24px;
-}
-::v-deep(.ant-modal-content) {
-  max-width: 90vw;
-}
+::v-deep(.ant-modal-body) { max-height: 70vh; overflow: auto; }
+::v-deep(.ant-modal) { width: auto !important; max-width: 90vw; top: 24px; }
+::v-deep(.ant-modal-content) { max-width: 90vw; }
 
 .modal-preview {
   max-width: 100%;
@@ -159,7 +176,6 @@ export default {
     align-items: center;
     justify-content: flex-end;
     flex: none;
-
     .header-date {
       background: #DFFAF1;
       padding: 6px 30px;
@@ -174,7 +190,6 @@ export default {
     background: #fff;
     overflow: hidden;
     height: 80%;
-
     textarea {
       border-radius: 10px;
       height: 100%;
@@ -187,16 +202,11 @@ export default {
     margin-top: 20px;
     flex: none;
 
-    .footer-left {
-      display: flex;
-      gap: 8px;
-    }
+    .footer-left { display: flex; gap: 8px; }
 
-    .footer-right {
-      .ant-btn {
-        width: 100%;
-        height: 50px;
-      }
+    .footer-right .ant-btn {
+      width: 100%;
+      height: 50px;
     }
   }
 }

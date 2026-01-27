@@ -7,6 +7,14 @@
         <Login v-else @switch-auth="toggleAuthForm" />
       </div>
 
+      <!-- Gate: show policy docs on first login -->
+      <div v-else-if="showPolicyGate" class="app-container">
+        <PolicyGate
+          :docs="POLICY_DOCS"
+          @accepted="handlePolicyCompleted"
+        />
+      </div>
+
       <!-- Main -->
       <div class="app-container" v-else>
         <div class="mood-journal-app-content-header">
@@ -43,6 +51,7 @@ import Analysis from './views/Analysis';
 
 import Signup from './components/Signup.vue';
 import Login from './components/Login.vue';
+import PolicyGate from './components/PolicyGate.vue'; // <-- new
 
 import { auth, db } from './firebase';
 import {
@@ -52,13 +61,17 @@ import {
   query,
   orderBy,
   onSnapshot,
-  where
+  where,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 export default {
-  components: { Write, Journal, Analysis, Signup, Login },
+  components: { Write, Journal, Analysis, Signup, Login, PolicyGate },
   data() {
     return {
       journalList: [],
@@ -81,25 +94,44 @@ export default {
       // --- sound for approval ---
       _audio: null,                  // HTMLAudioElement
       _approvalState: {},            // { [id]: boolean } last seen approval state
-      _primedApprovalWatch: false    // avoid dinging on initial load
+      _primedApprovalWatch: false,   // avoid dinging on initial load
+
+      // --- policy gate ---
+      showPolicyGate: false,
+      POLICY_DOCS: [
+        { title: 'List of Mental Health Services Available 1',        url: '/policies/mentalhealth.pdf' },
+        { title: 'Research Consent',      url: '/policies/REB_Informed_Consent.pdf' }
+      ],
+      _currentUid: null,
     };
   },
 
   created() {
+    // prepare sound
     this._audio = new Audio('/sounds/notify.wav');
     this._audio.preload = 'auto';
 
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
+      // cleanup prior listeners
       if (this._unsub) { this._unsub(); this._unsub = null; }
       this._approvalState = {};
       this._primedApprovalWatch = false;
 
       if (user) {
         this.isAuthenticated = true;
-        this.startRealtime(user.uid);
+        this._currentUid = user.uid;
+
+        // Check if user already acknowledged policies
+        const acknowledged = await this.checkPolicyAck(user.uid);
+        this.showPolicyGate = !acknowledged;
+
+        // Only start realtime once gate is passed
+        if (acknowledged) this.startRealtime(user.uid);
       } else {
         this.isAuthenticated = false;
+        this._currentUid = null;
         this.journalList = [];
+        this.showPolicyGate = false;
       }
     });
   },
@@ -109,6 +141,36 @@ export default {
   },
 
   methods: {
+    // ---------- Policy Gate ----------
+    async checkPolicyAck(uid) {
+      try {
+        const uref = doc(db, 'users', uid);
+        const snap = await getDoc(uref);
+        if (!snap.exists()) return false;
+        return !!snap.data().policyAcknowledged;
+      } catch (e) {
+        console.warn('checkPolicyAck error:', e);
+        return false;
+      }
+    },
+    async handlePolicyCompleted() {
+      // Mark acknowledged in Firestore, then enter app
+      try {
+        const uid = this._currentUid || auth.currentUser?.uid;
+        if (!uid) return;
+
+        const uref = doc(db, 'users', uid);
+        await setDoc(uref, { policyAcknowledged: true, policyAckAt: serverTimestamp() }, { merge: true });
+
+        this.showPolicyGate = false;
+        // start realtime stream now that gate is cleared
+        this.startRealtime(uid);
+      } catch (e) {
+        console.error('Failed to store policy ack:', e);
+        this.$message?.error('Could not complete policy step, please try again.');
+      }
+    },
+
     // ---------- UI ----------
     toggleAuthForm() { this.showSignup = !this.showSignup; },
     async logout() {
@@ -211,20 +273,51 @@ export default {
       this.saveStatus = 'saving';
       try {
         const user = auth.currentUser;
-        if (!user) { this.$message?.error('You must be logged in.'); this.saveStatus = 'idle'; return; }
+        if (!user) {
+          this.$message?.error('You must be logged in.');
+          this.saveStatus = 'idle';
+          return;
+        }
+
+        // --- Guards: require content + a chosen style button ---
+        const content = (obj.content || '').trim();
+        if (!content) {
+          this.$message?.warning?.('Please write your journal content first.');
+          this.saveStatus = 'idle';
+          return;
+        }
+        if (!obj.buttonNumber) {
+          this.$message?.warning?.('Please choose an image style before saving.');
+          this.saveStatus = 'idle';
+          return;
+        }
+
+        // Map selected style (no default fallback)
+        const presetMap = {
+          1: "line-art",
+          2: "comic-book",
+          3: "pixel-art",
+          4: "analog-film",
+          5: "neon-punk",
+          6: "digital-art"
+        };
+        const style_preset = presetMap[obj.buttonNumber];
+        if (!style_preset) {
+          this.$message?.error('Invalid style selection. Please pick a style again.');
+          this.saveStatus = 'idle';
+          return;
+        }
 
         obj.userId = user.uid;
         obj.userEmail = user.email;
         obj.timestamp = Date.now();
         obj.mood = 2;
         obj.sdImage = "";
-
-        const presetMap = { 1: "line-art", 2: "comic-book", 3: "pixel-art", 4: "analog-film", 5: "neon-punk" };
-        const style_preset = presetMap[obj.buttonNumber] || "digital-art";
-        const prompt = `${obj.content}`;
-
+        obj.isApproved = false;
+        obj.content = content;
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, style_preset })
         });
         if (!response.ok) throw new Error('Failed to generate image');
@@ -232,6 +325,7 @@ export default {
         const data = await response.json();
         const imageUrlOnBackend = `https://moodjournal-2-api.onrender.com${data.image_url}`;
 
+        // --- Upload to Firebase Storage ---
         const storage = getStorage();
         const storageRef = ref(storage, `generated_images/${Date.now()}.jpg`);
         const base64Response = await fetch(imageUrlOnBackend);
@@ -252,7 +346,6 @@ export default {
       }
     },
 
-    // (kept for completeness; not used when realtime is on)
     async fetchJournalList() {
       try {
         const userId = auth.currentUser.uid;
