@@ -23,7 +23,7 @@
           <div class="content-title-text">
             <div class="month">{{ currentJournal.title }}</div>
             <div class="week">
-              {{ currentJournal.enDate.slice(0, -5) }}
+              {{ currentJournal.enDate.slice(0, -5) }},
               {{ currentJournal.enDate.slice(-4) }},
               {{ currentJournal.weekDay }}
             </div>
