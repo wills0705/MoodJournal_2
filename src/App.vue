@@ -268,6 +268,13 @@ export default {
           return;
         }
 
+        const title = (obj.title || '').trim();
+        if (!title) {
+          this.$message?.warning?.('Please enter a title.');
+          this.saveStatus = 'idle';
+          return;
+        }
+
         const content = (obj.content || '').trim();
         if (!content) {
           this.$message?.warning?.('Please write your journal content first.');
@@ -301,6 +308,7 @@ export default {
         obj.mood = 2;
         obj.sdImage = "";
         obj.isApproved = false;
+        obj.title = title;
         obj.content = content;
 
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
@@ -381,7 +389,7 @@ export default {
 }
 
 .header-brand {
-  font-size: 18px;
+  font-size: 25px;
   font-weight: 700;
   color: #111827;
 }

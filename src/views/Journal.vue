@@ -21,8 +21,12 @@
       <div class="journal-list-content-left">
         <div class="content-title">
           <div class="content-title-text">
-            <div class="month">{{ currentJournal.enDate.slice(0, -5) }}</div>
-            <div class="week">{{ currentJournal.enDate.slice(-4) }}, {{ currentJournal.weekDay }}</div>
+            <div class="month">{{ currentJournal.title }}</div>
+            <div class="week">
+              {{ currentJournal.enDate.slice(0, -5) }}
+              {{ currentJournal.enDate.slice(-4) }},
+              {{ currentJournal.weekDay }}
+            </div>
           </div>
           <div class="content-title-icon">
             <img :src="currentFace" alt="" class="mood-icon" />
@@ -30,9 +34,6 @@
         </div>
 
         <div class="content-container">
-          <div class="content-container-title">
-            {{ currentJournal.title }}
-          </div>
           <div class="content-container-content">
             {{ currentJournal.content }}
           </div>

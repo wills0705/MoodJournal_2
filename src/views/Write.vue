@@ -7,6 +7,12 @@
 
     <!-- Textarea card -->
     <div class="journal-write-card">
+      <a-input
+        v-model:value="journalTitle"
+        placeholder="Journal title (e.g., Warm soup made my day)"
+        class="journal-title-input"
+      />
+
       <a-textarea
         v-model:value="journalContent"
         placeholder="Click here to start write your new journal"
@@ -98,6 +104,7 @@ export default {
   },
   data() {
     return {
+      journalTitle: '',
       journalContent: '',
       currentDate: formatDate(new Date()),
       isLoading: false,
@@ -107,7 +114,7 @@ export default {
   },
   computed: {
     canSave() {
-      return !!this.activeButton && !!this.journalContent.trim();
+      return !!this.activeButton && !!this.journalContent.trim() && !!this.journalTitle.trim();
     },
     displayDate() {
       const d = new Date();
@@ -127,7 +134,11 @@ export default {
     }
   },
   methods: {
-    clearText() { this.journalContent = '' },
+    clearText() { 
+      this.journalContent = '';
+      this.journalTitle = '';
+    },
+
     saveText() {
       // Hard guard: require content and style selection
       if (!this.journalContent.trim()) {
@@ -143,6 +154,7 @@ export default {
       setTimeout(() => {
         const d = new Date();
         const textObj = {
+          title: this.journalTitle.trim(),
           currentDate: formatDate(d),
           currentTime: d,
           content: this.journalContent.trim(),
@@ -199,7 +211,7 @@ export default {
 }
 
 .journal-write-date {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   padding: 2px 2px;
 }
