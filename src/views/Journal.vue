@@ -297,6 +297,7 @@ export default {
 
       &-date {
         margin-top: 10px;
+        font-size: 13px;
       }
 
       &:last-of-type {
@@ -333,7 +334,7 @@ export default {
 
         &-text {
           .month {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
           }
 
