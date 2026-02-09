@@ -2,8 +2,8 @@
   <div class="analysis-journal">
     <div class="insight-tab">
       <div class="insight-tab-item">Mood trend view</div>
-      <!-- <div class="insight-tab-item">Topic trend view</div> -->
     </div>
+
     <div class="insight-content">
       <div class="insight-content-header">
         <div class="header-date">
@@ -11,38 +11,65 @@
         </div>
         <div class="header-select"></div>
       </div>
+
       <div class="insight-content-date">
         <div class="date-left">
           <div class="date-left-change-week">
+            <!-- LEFT: always enabled -->
             <div class="date-left-change-week-item" @click="handleWeekChange(-1)">
-              <LeftCircleOutlined :style="{ color: '#2d7dfe', fontSize: '26px' }" />
+              <LeftCircleOutlined :style="{ color: '#111827', fontSize: '26px' }" />
             </div>
-            <div :class="['date-left-change-week-item', weekIndex === 0 ? 'disable-change' : '']"
-              @click="handleWeekChange(1)">
-              <RightCircleOutlined :style="{ color: '#2d7dfe', fontSize: '26px' }" />
+
+            <!-- RIGHT: disabled when weekIndex === 0 -->
+            <div
+              :class="['date-left-change-week-item', weekIndex === 0 ? 'disable-change' : '']"
+              @click="handleWeekChange(1)"
+            >
+              <RightCircleOutlined :style="{ color: weekIndex === 0 ? '#9ca3af' : '#111827', fontSize: '26px' }" />
             </div>
           </div>
+
           <div class="date-left-mood-item" v-for="(item, index) in moodList" :key="index">
             {{ item }}
           </div>
         </div>
+
         <div class="date-right" v-if="lineVisible">
-          <div :class="['date-right-item', item.fullDate === currentDate ? 'active-date' : '']"
-            v-for="(item, index) in weekList" :key="index">
+          <div
+            :class="['date-right-item', item.fullDate === currentDate ? 'active-date' : '']"
+            v-for="(item, index) in weekList"
+            :key="index"
+          >
             <div class="date-title">
               <div class="day">{{ item.day }}</div>
               <div class="date">{{ item.date }}</div>
             </div>
+
             <div class="mood-item" v-for="(_text, ind) in moodList" :key="ind">
               <div
-                :class="['mood-item-img', dateMoodList[index] && dateMoodList[index].currentDate === currentFormatDate ? 'active-img' : '']"
-                v-if="dateMoodList[index] && dateMoodList[index].mood === moodList.length - ind  - 1 && dateMoodList[index].currentDate === item.fullDate"
-                :ref="dateMoodList[index] && dateMoodList[index].mood === moodList.length - ind  - 1 && dateMoodList[index].currentDate === item.fullDate ? `anchor${index}` : ''"
-                @click="showContent(dateMoodList[index])">
-                <img :src="dateMoodList[index].sdImage" alt="wait approve" class="mood-img">
+                :class="[
+                  'mood-item-img',
+                  dateMoodList[index] && dateMoodList[index].currentDate === currentFormatDate ? 'active-img' : '',
+                ]"
+                v-if="
+                  dateMoodList[index] &&
+                  dateMoodList[index].mood === moodList.length - ind - 1 &&
+                  dateMoodList[index].currentDate === item.fullDate
+                "
+                :ref="
+                  dateMoodList[index] &&
+                  dateMoodList[index].mood === moodList.length - ind - 1 &&
+                  dateMoodList[index].currentDate === item.fullDate
+                    ? `anchor${index}`
+                    : ''
+                "
+                @click="showContent(dateMoodList[index])"
+              >
+                <img :src="dateMoodList[index].sdImage" alt="wait approve" class="mood-img" />
               </div>
             </div>
           </div>
+
           <div class="line line1"></div>
           <div class="line line2"></div>
           <div class="line line3"></div>
@@ -53,21 +80,20 @@
     </div>
   </div>
 </template>
+
 <script>
 import { notification } from 'ant-design-vue';
 import { LeftCircleOutlined, RightCircleOutlined } from '@ant-design/icons-vue';
-import LeaderLine from 'leader-line-vue'
-import { getDateInfo, monthMap, getWeekDates, formatDate } from '../lib/util'
+import LeaderLine from 'leader-line-vue';
+import { getDateInfo, monthMap, getWeekDates, formatDate } from '../lib/util';
 
 const dateInfo = getDateInfo(new Date());
+
 export default {
   name: 'analysis',
   components: { LeftCircleOutlined, RightCircleOutlined },
   props: {
-    journalList: {
-      type: Array,
-      default: []
-    }
+    journalList: { type: Array, default: [] },
   },
   created() {
     this.handleMoodList();
@@ -80,35 +106,33 @@ export default {
       currentFormatDate: formatDate(new Date()),
       weekList: getWeekDates(0),
       dateMoodList: [],
-      moodList: ['Great','Good','Neutral','Mooday','Down'],
+      moodList: ['Great', 'Good', 'Neutral', 'Mooday', 'Down'],
       modalVisible: false,
       currentContent: '',
       weekIndex: 0,
       lineVisible: true,
       lineArr: [],
-    }
+    };
   },
   watch: {
-    // LIVE update when journals change
     journalList: {
       handler() {
         this.handleMoodList();
-        // redraw connection lines after DOM updates
         this.$nextTick(() => {
           this.destroyLine();
           setTimeout(() => this.handleLine(), 10);
         });
       },
-      deep: true
-    }
+      deep: true,
+    },
   },
   methods: {
     handleWeekChange(flag) {
       if (flag > 0) {
         if (this.weekIndex === 0) return;
-        this.weekIndex++
+        this.weekIndex++;
       } else {
-        this.weekIndex--
+        this.weekIndex--;
       }
       this.destroyLine();
       this.lineVisible = false;
@@ -119,15 +143,15 @@ export default {
         this.lineVisible = true;
         setTimeout(() => {
           this.handleLine();
-        }, 10)
-      })
+        }, 10);
+      });
     },
     handleMoodList() {
       this.dateMoodList = new Array(7).fill(null);
       this.weekList.forEach((item, index) => {
-        const obj = this.journalList.find(journal => journal.currentDate === item.fullDate);
+        const obj = this.journalList.find((journal) => journal.currentDate === item.fullDate);
         if (obj) this.dateMoodList[index] = obj;
-      })
+      });
     },
     setCurrentMonthAndYear() {
       const di = getDateInfo(this.weekList[0].fullDate);
@@ -139,8 +163,8 @@ export default {
         this.currentContent = obj.content;
         return;
       }
-      this.modalVisible = true
-      this.currentContent = obj.content
+      this.modalVisible = true;
+      this.currentContent = obj.content;
       notification.open({
         key: 1,
         description: () => this.currentContent,
@@ -152,56 +176,56 @@ export default {
       });
     },
     handleLine() {
-      const arr = Object.keys(this.$refs)
+      const arr = Object.keys(this.$refs);
       arr.forEach((item, index) => {
         if (arr[index] && arr[index + 1] && this.$refs[arr[index]][0] && this.$refs[arr[index + 1]][0]) {
           let line = LeaderLine.setLine(this.$refs[item][0], this.$refs[arr[index + 1]][0], {
             startPlug: 'behind',
             endPlug: 'behind',
-            color: '#333',
+            color: '#111827',     // ✅ black
             path: 'straight',
-            size: 1,
+            size: 2,              // ✅ thicker
             startSocket: 'right',
             endSocket: 'left',
-            startSocketGravity: 100
-          })
-          this.lineArr.push(line)
+            startSocketGravity: 100,
+          });
+          this.lineArr.push(line);
         }
-      })
+      });
     },
     setLineVisible(visible) {
-      const arr = document.querySelectorAll('.leader-line')
+      const arr = document.querySelectorAll('.leader-line');
       if (arr && arr.length) {
-        arr.forEach(item => {
-          item.style.display = visible ? 'block' : 'none'
-        })
+        arr.forEach((item) => {
+          item.style.display = visible ? 'block' : 'none';
+        });
       }
     },
     destroyLine() {
-      this.lineArr.forEach(item => item.remove());
-      this.lineArr = []
-    }
+      this.lineArr.forEach((item) => item.remove());
+      this.lineArr = [];
+    },
   },
   activated() {
-    this.setLineVisible(true)
+    this.setLineVisible(true);
   },
   deactivated() {
-    this.setLineVisible(false)
+    this.setLineVisible(false);
   },
   mounted() {
     this.handleLine();
-    this.setLineVisible(true)
+    this.setLineVisible(true);
   },
   unmounted() {
-    this.setLineVisible(false)
+    this.setLineVisible(false);
   },
   beforeDestroy() {
     this.destroyLine();
-  }
+  },
 };
 </script>
+
 <style lang="less" scoped>
-/* (unchanged styles) */
 .analysis-journal {
   height: 100%;
   display: flex;
@@ -249,13 +273,12 @@ export default {
 
           &-item {
             cursor: pointer;
-
-            &:hover { opacity: 0.8; }
+            &:hover { opacity: 0.85; }
           }
 
           .disable-change {
             cursor: not-allowed;
-            opacity: 0.2;
+            opacity: 0.35;
           }
         }
 
@@ -275,8 +298,8 @@ export default {
           left: 0;
           right: 0;
           width: 95%;
-          height: 0.5px;
-          background: rgba(0, 0, 0, 0.1);
+          height: 1px; /* slightly stronger grid */
+          background: rgba(0, 0, 0, 0.12);
         }
 
         .line1 { top: 150px; }
@@ -285,12 +308,13 @@ export default {
         .line4 { top: 390px; }
         .line5 { top: 470px; }
 
+        /* ✅ active date -> black circle */
         .active-date {
-          color: #2d7dfe;
+          color: #111827;
           .date-title .date {
             color: #fff;
             border-radius: 50%;
-            background-color: #2d7dfe;
+            background-color: #111827;
           }
         }
 
@@ -322,7 +346,8 @@ export default {
             z-index: 9;
             position: relative;
 
-            .active-img { background: #2d7dfe; }
+            /* ✅ selected dot background ring -> black */
+            .active-img { background: #111827; }
 
             &-img {
               border-radius: 50%;

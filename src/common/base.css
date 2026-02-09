@@ -4,7 +4,7 @@ html,body{
   height: 100%;
   overflow: hidden;
   font-size: 16px;
-  
+  font-family: Georgia, "Times New Roman", Times, serif;
 }
 #app{
   height: 100%;
@@ -24,11 +24,48 @@ html,body{
   background-color: #e1e1e1;
 }
 
-/* 只在滚动时显示滚动条 */
 ::-webkit-scrollbar-thumb {
   visibility: hidden;
 }
 
 :hover::-webkit-scrollbar-thumb {
   visibility: visible;
+}
+
+.mj-style-modal .ant-modal-footer .ant-btn {
+  border-radius: 10px;
+  border-color: #d1d5db !important;
+  color: #111827 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mj-style-modal .ant-modal-footer .ant-btn:hover,
+.mj-style-modal .ant-modal-footer .ant-btn:focus,
+.mj-style-modal .ant-modal-footer .ant-btn:active {
+  border-color: #111827 !important;
+  color: #111827 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mj-style-modal .ant-modal-footer .ant-btn-primary {
+  background: #111827 !important;
+  border-color: #111827 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mj-style-modal .ant-modal-footer .ant-btn-primary:hover,
+.mj-style-modal .ant-modal-footer .ant-btn-primary:focus,
+.mj-style-modal .ant-modal-footer .ant-btn-primary:active {
+  background: #000000 !important;
+  border-color: #000000 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.mj-style-modal .ant-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }

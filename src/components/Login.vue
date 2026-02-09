@@ -77,7 +77,7 @@
   
   .auth-container button[type="submit"] {
     padding: 12px 15px;
-    background-color: #4CAF50;
+    background-color: #969696;
     color: #ffffff;
     border: none;
     border-radius: 4px;
@@ -86,7 +86,7 @@
   }
   
   .auth-container button[type="submit"]:hover {
-    background-color: #45a049;
+    background-color: #454545;
   }
   
   .auth-container button {
