@@ -258,7 +258,6 @@ export default {
     },
 
     async handleUpdate(obj) {
-      // unchanged - leaving your existing save logic as-is
       this.saveStatus = 'saving';
       try {
         const user = auth.currentUser;
@@ -311,7 +310,7 @@ export default {
         obj.title = title;
         obj.content = content;
 
-        const prompt = `${obj.content}`;
+        const prompt = content;
 
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
           method: 'POST',
