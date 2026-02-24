@@ -386,6 +386,14 @@ export default {
             margin-left: 8px;
             margin-top: 10px;
             cursor: pointer;
+
+            filter: grayscale(100%) brightness(0.7);
+            opacity: 0.6;
+          }
+
+          .mood-icon:hover {
+            filter: grayscale(0%);
+            opacity: 0.85;
           }
         }
       }
