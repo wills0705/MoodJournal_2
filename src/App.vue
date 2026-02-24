@@ -391,6 +391,7 @@ export default {
 }
 
 .header-brand {
+  font-family: Georgia, 'Times New Roman', Times, serif;
   font-size: 25px;
   font-weight: 700;
   color: #111827;
