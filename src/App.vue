@@ -311,6 +311,8 @@ export default {
         obj.title = title;
         obj.content = content;
 
+        const prompt = `${obj.content}`;
+
         const response = await fetch('https://moodjournal-2-api.onrender.com/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

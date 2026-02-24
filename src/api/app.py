@@ -11,7 +11,7 @@ IMAGE_DIR = './generated_images'
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Allow CORS from frontend onrender domain
-CORS(app, supports_credentials=True, origins=["https://moodjournal-2-5uii.onrender.com"])
+CORS(app, supports_credentials=True, origins=["http://localhost:5173/"])
 
 # Stable Diffusion API configuration
 API_URL = "https://api.stability.ai/v2beta/stable-image/generate/core"
