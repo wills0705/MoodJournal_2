@@ -24,20 +24,16 @@ ALLOWED_PRESETS = {
     "neon-punk","origami","photographic","pixel-art","tile-texture"
 }
 
-@app.route('/api/generate-image', methods=['POST', 'OPTIONS'])
+@app.route('/api/generate-image', methods=['POST'])
 def generate_image():
-    if request.method == 'OPTIONS':
-        return '', 204
-
     try:
         data = request.json or {}
         prompt = data.get("prompt")
-        style_preset = data.get("style_preset")  # <-- NEW
+        style_preset = data.get("style_preset")
 
         if not prompt:
             return jsonify({"error": "Prompt is required"}), 400
 
-        # validate style_preset (optional, but safer)
         if style_preset and style_preset not in ALLOWED_PRESETS:
             return jsonify({"error": f"Invalid style_preset: {style_preset}"}), 400
 
