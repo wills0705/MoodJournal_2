@@ -12,7 +12,6 @@
       <div class="pg-body">
         <div class="pg-doc-title">{{ docs[step].title }}</div>
 
-        <!-- Render PDFs/HTML/Markdown via iframe. Static assets in /public are perfect -->
         <iframe
           class="pg-frame"
           :src="docs[step].url"
@@ -24,6 +23,29 @@
           <input type="checkbox" v-model="confirmedStep" />
           I have read this page and agree
         </label>
+
+        <!-- Only show extra consent checkboxes on final page -->
+        <div v-if="step === docs.length - 1">
+          <label class="pg-checkbox">
+            <input type="checkbox" v-model="extraConfirmA" />
+            YES, I agree to participate in this study.
+          </label>
+
+          <label class="pg-checkbox">
+            <input type="checkbox" v-model="extraConfirmB" />
+            I agree to allow my study data to be stored and used for this research as described in the Informed Consent
+          </label>
+
+          <label class="pg-checkbox">
+            <input type="checkbox" v-model="extraConfirmC" />
+            I agree to allow the researchers to personally send me the results of the study via email
+          </label>
+
+          <label class="pg-checkbox">
+            <input type="checkbox" v-model="extraConfirmD" />
+            I do not wish to receive the study results via email
+          </label>
+        </div>
       </div>
 
       <div class="pg-actions">
@@ -41,7 +63,7 @@
         <button
           v-else
           class="pg-btn success"
-          :disabled="!confirmedStep"
+          :disabled="!canAgreeAndContinue"
           @click="$emit('accepted')"
         >
           I agree & continue
@@ -65,7 +87,33 @@ export default {
       step: 0,
       confirmedStep: false,
       frameLoaded: false,
+      extraConfirmA: false,
+      extraConfirmB: false,
+      extraConfirmC: false,
+      extraConfirmD: false,
     };
+  },
+  computed: {
+    canAgreeAndContinue() {
+      if (this.step !== this.docs.length - 1) return this.confirmedStep;
+
+      const requiredChecked =
+        this.confirmedStep && this.extraConfirmA && this.extraConfirmB;
+
+      const emailChoiceChecked =
+        (this.extraConfirmC && !this.extraConfirmD) ||
+        (!this.extraConfirmC && this.extraConfirmD);
+
+      return requiredChecked && emailChoiceChecked;
+    },
+  },
+  watch: {
+    extraConfirmC(val) {
+      if (val) this.extraConfirmD = false;
+    },
+    extraConfirmD(val) {
+      if (val) this.extraConfirmC = false;
+    },
   },
   methods: {
     next() {
@@ -73,12 +121,20 @@ export default {
         this.step++;
         this.confirmedStep = false;
         this.frameLoaded = false;
+        this.extraConfirmA = false;
+        this.extraConfirmB = false;
+        this.extraConfirmC = false;
+        this.extraConfirmD = false;
       }
     },
     prev() {
       if (this.step > 0) {
         this.step--;
-        this.confirmedStep = true; // already confirmed previous page
+        this.confirmedStep = true;
+        this.extraConfirmA = false;
+        this.extraConfirmB = false;
+        this.extraConfirmC = false;
+        this.extraConfirmD = false;
       }
     },
   },
@@ -87,7 +143,7 @@ export default {
 
 <style scoped>
 .pg-root{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#00000066;z-index:9999}
-.pg-card{width:min(920px,92vw);height:min(80vh,820px);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column}
+.pg-card{width:min(920px,92vw);height:720px;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column}
 .pg-header{padding:16px 20px 0}
 .pg-title{font-size:20px;font-weight:800}
 .pg-sub{margin-top:4px;color:#555}
@@ -96,7 +152,15 @@ export default {
 .pg-body{flex:1;padding:12px 20px;display:flex;flex-direction:column;gap:10px}
 .pg-doc-title{font-weight:700}
 .pg-frame{flex:1;width:100%;border:1px solid #eee;border-radius:10px;background:#fafafa}
-.pg-checkbox{margin-top:8px;user-select:none}
+
+.pg-checkbox{
+  margin-top:8px;
+  user-select:none;
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+}
+
 .pg-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px 16px;border-top:1px solid #f0f0f0}
 .pg-btn{padding:8px 14px;border-radius:8px;border:1px solid #d0d7de;background:#fff;cursor:pointer}
 .pg-btn:disabled{opacity:.5;cursor:not-allowed}
