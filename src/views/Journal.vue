@@ -60,7 +60,7 @@
         <div class="content-img">
           <template v-if="currentJournal.isApproved === true">
             <img
-              :src="currentJournal.sdImage"
+              :src="displayImageSrc"
               alt="Generated Image"
               class="ai-img"
               @error="handleImageError"
@@ -116,23 +116,40 @@ export default {
       },
       faceList: [moodSad, moodFrown, moodNormal, moodSmile, moodLaugh],
       currentFace: '',
-      fallbackCat: ''
+      fallbackCat: '',
+      imageLoadFailed: false,
+      imageRetryCount: 0,
+      maxImageRetries: 2,
+      imageRetryTimer: null,
+      imageVersion: 0
     };
+  },
+  computed: {
+    displayImageSrc() {
+      if (!this.currentJournal?.sdImage) {
+        return this.fallbackCat;
+      }
+
+      if (this.imageLoadFailed) {
+        return this.fallbackCat;
+      }
+
+      return this.appendRetryParam(this.currentJournal.sdImage, this.imageVersion);
+    }
   },
   watch: {
     journalList() {
       this.filterJournal();
-      // keep currently opened entry in sync with freshest data
       if (this.currentJournal?.id) {
         const fresh = this.journalList.find(j => j.id === this.currentJournal.id);
         if (fresh) {
+          this.resetImageState();
           this.currentJournal = {
             ...this.currentJournal,
             ...fresh,
             enDate: this.formatEnDate(fresh.currentDate),
             weekDay: this.getWeekDay(fresh.currentDate)
           };
-          // update face if mood changed
           if (
             typeof fresh.mood === 'number' &&
             fresh.mood >= 0 &&
@@ -147,9 +164,47 @@ export default {
   activated() {
     this.filterJournal();
   },
+  beforeUnmount() {
+    if (this.imageRetryTimer) {
+      clearTimeout(this.imageRetryTimer);
+    }
+  },
   methods: {
-    handleImageError(e) {
-      e.target.src = this.fallbackCat;
+    handleImageError() {
+      if (!this.currentJournal?.sdImage) {
+        this.imageLoadFailed = true;
+        return;
+      }
+
+      if (this.imageRetryCount >= this.maxImageRetries) {
+        this.imageLoadFailed = true;
+        return;
+      }
+
+      if (this.imageRetryTimer) {
+        clearTimeout(this.imageRetryTimer);
+      }
+
+      this.imageRetryCount += 1;
+
+      this.imageRetryTimer = setTimeout(() => {
+        this.imageVersion += 1;
+      }, 2500);
+    },
+    resetImageState() {
+      this.imageLoadFailed = false;
+      this.imageRetryCount = 0;
+      this.imageVersion = 0;
+
+      if (this.imageRetryTimer) {
+        clearTimeout(this.imageRetryTimer);
+        this.imageRetryTimer = null;
+      }
+    },
+    appendRetryParam(url, version) {
+      if (!url) return '';
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}retry=${version}`;
     },
     faceIconUrl(path) {
       return new URL(path, import.meta.url).href;
@@ -160,6 +215,7 @@ export default {
       this.updateJournalMood();
     },
     showJournalDetail(journal) {
+      this.resetImageState();
       this.currentJournal = { ...journal };
       if (journal.mood >= 0 && journal.mood < this.faceList.length) {
         this.currentFace = this.faceIconUrl(this.faceList[journal.mood]);
@@ -168,7 +224,6 @@ export default {
       }
     },
     filterJournal() {
-      // rebuild left list with derived fields
       this.list = this.journalList.map((item) => {
         return {
           ...item,
@@ -213,7 +268,8 @@ export default {
         }
         const fresh = { id: snap.id, ...snap.data() };
 
-        // Update current panel
+        this.resetImageState();
+
         this.currentJournal = {
           ...this.currentJournal,
           ...fresh,
@@ -221,12 +277,17 @@ export default {
           weekDay: this.getWeekDay(fresh.currentDate)
         };
 
-        // Keep list in sync
         this.list = this.list.map((it) =>
-          it.id === fresh.id ? { ...it, ...fresh, enDate: this.formatEnDate(fresh.currentDate), weekDay: this.getWeekDay(fresh.currentDate) } : it
+          it.id === fresh.id
+            ? {
+                ...it,
+                ...fresh,
+                enDate: this.formatEnDate(fresh.currentDate),
+                weekDay: this.getWeekDay(fresh.currentDate)
+              }
+            : it
         );
 
-        // Update face if needed
         if (
           typeof fresh.mood === 'number' &&
           fresh.mood >= 0 &&
